@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DC DeckBuilder — Lobby</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow-y: auto;
+    position: relative;
+    color: #fff;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background-color: #04060c;
+    background-image: url("lobby-background.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(to top, rgba(3,5,10,0.78) 0%, rgba(3,5,10,0.34) 16%, transparent 40%),
+      radial-gradient(ellipse 130% 95% at 50% 42%, rgba(3,5,10,0.14) 0%, rgba(3,5,10,0.42) 72%, rgba(3,5,10,0.8) 100%);
+  }
+
+  .back {
+    position: absolute;
+    top: 1.2rem; left: 1.4rem; z-index: 2;
+    color: rgba(255,255,255,0.75); text-decoration: none;
+    font-size: 0.85rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.45rem 0.9rem; border-radius: 8px; background: rgba(4,6,12,0.35);
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .back:hover { color: #fff; background: rgba(4,6,12,0.55); }
+
+  .title {
+    z-index: 1; position: relative;
+    font-size: clamp(2.4rem, 6vw, 4.2rem); font-weight: 900; letter-spacing: 0.08em; line-height: 1;
+    text-align: center; color: #fff; margin-bottom: 0.5rem;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.85), 0 0 16px rgba(255,45,60,0.45);
+  }
+
+  .sub {
+    z-index: 1; position: relative; font-size: 0.9rem; letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(255,255,255,0.6); margin-bottom: 1.1rem; text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  }
+
+  .linkbox {
+    z-index: 1; position: relative; display: flex; gap: 0.5rem; align-items: center;
+    width: min(420px, 86vw); margin-bottom: 1.3rem;
+  }
+  .linkbox input {
+    flex: 1; padding: 0.7rem 0.9rem; font-family: inherit; font-size: 0.85rem; letter-spacing: 0.02em;
+    color: #fff; background: rgba(4,6,12,0.6); border: 1px solid rgba(255,255,255,0.25); border-radius: 8px;
+  }
+  .copybtn {
+    flex: none; padding: 0.7rem 1rem; font-family: inherit; font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase; color: #fff; cursor: pointer;
+    background: rgba(42,51,72,0.9); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;
+    transition: filter 0.15s ease;
+  }
+  .copybtn:hover { filter: brightness(1.35); }
+
+  .slots { z-index: 1; position: relative; display: flex; flex-direction: column; gap: 0.7rem; width: min(420px, 86vw); margin-bottom: 1.2rem; }
+  .slot {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.8rem 1rem; border-radius: 10px;
+    background: linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border: 1px solid rgba(255,255,255,0.22);
+  }
+  .slot.me { border-color: rgba(255,120,130,0.6); box-shadow: 0 0 14px rgba(255,45,60,0.25); }
+  .name { font-size: 0.95rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .pickstat { font-size: 0.78rem; letter-spacing: 0.04em; color: rgba(255,255,255,0.7); white-space: nowrap; }
+  .tag { padding: 0.18rem 0.7rem; border-radius: 999px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; }
+  .tag.you { color: #ffd34a; background: rgba(255,211,74,0.14); border: 1px solid rgba(255,211,74,0.5); }
+  .tag.human { color: #43d675; background: rgba(67,214,117,0.14); border: 1px solid rgba(67,214,117,0.5); }
+  .tag.cpu { color: #6db3ff; background: rgba(109,179,255,0.12); border: 1px solid rgba(109,179,255,0.5); }
+
+  .menu { z-index: 1; position: relative; display: flex; flex-direction: column; gap: 0.9rem; align-items: center; width: min(420px,86vw); }
+  .btn {
+    width: 100%; padding: 0.85rem 1rem; font-family: inherit; font-size: 1rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    color: #fff; text-align: center; background: linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96));
+    border: 1px solid rgba(255,255,255,0.22); border-radius: 10px; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  }
+  .btn:hover { transform: translateY(-2px); filter: brightness(1.25); box-shadow: 0 4px 18px rgba(0,0,0,0.45); }
+  .btn:focus-visible { outline: 2px solid #ff2d3c; outline-offset: 3px; }
+  .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+  .btn[disabled]:hover { transform: none; filter: none; box-shadow: none; }
+  .btn-primary { background: linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97)); border-color: rgba(255,120,130,0.5); box-shadow: 0 0 22px rgba(255,45,60,0.3); }
+
+  .status { z-index: 1; position: relative; margin-top: 0.9rem; font-size: 0.82rem; letter-spacing: 0.04em; color: rgba(255,255,255,0.7); text-align: center; min-height: 1.2em; }
+
+  /* Hero picker */
+  .picker { z-index: 1; position: relative; width: min(560px,92vw); margin-top: 1.3rem; padding: 1rem; border-radius: 14px; background: rgba(4,6,12,0.55); border: 1px solid rgba(255,255,255,0.14); }
+  .picker h2 { font-size: 0.9rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 0.9rem; text-align: center; }
+  .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px,1fr)); gap: 0.6rem; }
+  .po-card { aspect-ratio: 5/7; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: rgba(255,255,255,0.04); padding: 0; }
+  .po-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .po-card:hover { border-color: rgba(255,255,255,0.6); }
+  .po-card.taken { opacity: 0.32; cursor: not-allowed; filter: grayscale(0.7); }
+  .po-card.mine { border-color: #ffd34a; box-shadow: 0 0 12px rgba(255,211,74,0.4); }
+  .po-random { grid-column: 1 / -1; padding: 0.6rem; font-family: inherit; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: #fff; background: rgba(42,51,72,0.9); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; cursor: pointer; }
+  .po-random:hover { filter: brightness(1.3); }
+
+  /* Settings overlay */
+  .overlay { position: fixed; inset: 0; z-index: 10; background: rgba(3,5,10,0.62); display: none; align-items: center; justify-content: center; }
+  .overlay.open { display: flex; }
+  .panel { width: min(440px, 88vw); max-height: 92vh; overflow-y: auto; background: linear-gradient(180deg,#141a2b,#0c101d); border: 1px solid rgba(255,255,255,0.16); border-radius: 14px; padding: 1.5rem; box-shadow: 0 18px 60px rgba(0,0,0,0.6); }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
+  .panel-title { font-size: 1.25rem; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; }
+  .close-x { width: 30px; height: 30px; border-radius: 999px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.75); font-size: 1rem; line-height: 1; cursor: pointer; }
+  .close-x:hover { color: #fff; background: rgba(255,45,60,0.35); border-color: rgba(255,120,130,0.6); }
+  .set-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem; padding: 1rem 0; }
+  .set-row + .set-row { border-top: 1px solid rgba(255,255,255,0.08); }
+  .set-label { font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; color: rgba(255,255,255,0.88); }
+  .desc { display: block; margin-top: 0.3rem; font-size: 0.75rem; letter-spacing: 0.03em; color: rgba(255,255,255,0.45); }
+  .switch { position: relative; width: 48px; height: 26px; flex: none; cursor: pointer; }
+  .switch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; margin: 0; }
+  .track { position: absolute; inset: 0; border-radius: 999px; background: rgba(255,255,255,0.16); transition: background 0.18s ease; }
+  .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 999px; background: #fff; transition: left 0.18s ease; }
+  .switch input:checked + .track { background: rgba(255,45,60,0.85); }
+  .switch input:checked + .track::after { left: 25px; }
+  .pills { display: flex; gap: 0.5rem; }
+  .pill { padding: 0.42rem 0.95rem; border-radius: 999px; font-family: inherit; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.65); background: transparent; border: 1px solid rgba(255,255,255,0.25); cursor: pointer; }
+  .pill:hover { color: #fff; }
+  .pill.active { background: rgba(164,22,34,0.92); border-color: rgba(255,120,130,0.55); color: #fff; }
+  .panel-done { margin-top: 1.3rem; width: 100%; padding: 0.85rem 1rem; font-family: inherit; font-size: 1rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #fff; background: linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97)); border: 1px solid rgba(255,120,130,0.5); border-radius: 10px; cursor: pointer; box-shadow: 0 0 18px rgba(255,45,60,0.25); }
+  .panel-done:hover { filter: brightness(1.2); }
+
+  .legal { position: absolute; bottom: 1.1rem; left: 0; right: 0; z-index: 1; text-align: center; padding: 0 1rem; font-size: 0.72rem; line-height: 1.55; letter-spacing: 0.03em; color: rgba(255,255,255,0.8); text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+</style>
+</head>
+<body>
+
+  <a class="back" href="index.html">← Menu</a>
+
+  <h1 class="title">LOBBY</h1>
+  <p class="sub" id="roomSub">Room</p>
+
+  <div class="linkbox">
+    <input type="text" readonly id="linkIn" aria-label="Invite link" />
+    <button class="copybtn" type="button" id="copyBtn">Copy link</button>
+  </div>
+
+  <div class="slots" id="slots" aria-label="Players"></div>
+
+  <nav class="menu" aria-label="Lobby actions">
+    <button class="btn" type="button" id="addAiBtn">Add AI player</button>
+    <button class="btn" type="button" id="settingsBtn">Settings</button>
+    <button class="btn btn-primary" type="button" id="startBtn" disabled>Start game</button>
+  </nav>
+
+  <p class="status" id="status"></p>
+
+  <div class="picker" id="picker">
+    <h2 id="pickTitle">Pick your Super Hero</h2>
+    <div class="pgrid" id="pgrid"></div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="panel" role="dialog" aria-label="Settings">
+      <div class="panel-head">
+        <span class="panel-title">Settings</span>
+        <button class="close-x" type="button" id="closeX" aria-label="Close settings">×</button>
+      </div>
+      <div class="set-row">
+        <div>
+          <span class="set-label">Refill destroyed Weakness &amp; Kick cards</span>
+          <span class="desc">Destroyed cards return to their stacks instead of staying gone.</span>
+        </div>
+        <label class="switch"><input type="checkbox" id="refillToggle"><span class="track"></span></label>
+      </div>
+      <div class="set-row">
+        <span class="set-label">AI Difficulty</span>
+        <div class="pills" role="group" aria-label="AI difficulty">
+          <button class="pill" type="button" data-diff="Easy">Easy</button>
+          <button class="pill active" type="button" data-diff="Medium">Medium</button>
+          <button class="pill" type="button" data-diff="Hard">Hard</button>
+        </div>
+      </div>
+      <button class="panel-done" type="button" id="doneBtn">Done</button>
+    </div>
+  </div>
+
+  <footer class="legal">
+    DC UNIVERSE and all related characters and elements are trademarks of and DC Comics<br />
+    Cryptozoic
+  </footer>
+
+<script src="cards.js"></script>
+<script type="importmap">
+{ "imports": {
+  "trystero": "./trystero/pkg-trystero/dist/index.js",
+  "@trystero-p2p/nostr": "./trystero/pkg-nostr/dist/index.js",
+  "@trystero-p2p/core": "./trystero/pkg-core/dist/index.js",
+  "@noble/secp256k1": "./trystero/pkg-secp256k1/index.js"
+}}
+</script>
+<script type="module" src="./trystero/room.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  var q = new URLSearchParams(location.search);
+  var role = q.get('role') || 'host';           // host | guest
+  var roomId = (q.get('room') || '').trim();
+  if (!roomId) { location.replace('index.html'); return; }
+
+  var PERSONAS = DCCARDS.cards.filter(function (c) { return c.type === 'persona'; }).map(function (c) { return c.id; });
+  function pName(id) { return DCCARDS.byId[id].name.replace('-mc', ''); }
+  function img(id) { return 'assets/cards/' + id + '.jpg'; }
+
+  var slotsEl = document.getElementById('slots');
+  var statusEl = document.getElementById('status');
+  var startBtn = document.getElementById('startBtn');
+  var addAiBtn = document.getElementById('addAiBtn');
+  var pgrid = document.getElementById('pgrid');
+  var pickTitle = document.getElementById('pickTitle');
+
+  function currentDiff() { var a = document.querySelector('.pill.active'); return a ? a.getAttribute('data-diff') : 'Medium'; }
+
+  // ---- Trystero room (loaded by trystero/room.mjs) -----------------------
+  var room, rosterState, pickAction, beginAction;
+  var myUserId = null, mySeat = -1, isHost = role === 'host';
+
+  // Resolve index.html relative to THIS page (same folder), so the link is correct whether the site
+  // sits at the origin root or under a subpath (e.g. a GitHub Pages project site /repo-name/).
+  function shareLink() { return new URL('index.html', location.href).href + '?room=' + encodeURIComponent(roomId); }
+
+  document.getElementById('linkIn').value = shareLink();
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var inp = document.getElementById('linkIn');
+    if (navigator.clipboard) navigator.clipboard.writeText(inp.value).catch(function () {});
+    else { inp.select(); try { document.execCommand('copy'); } catch (e) {} }
+  });
+
+  function renderSeats(players) {
+    slotsEl.innerHTML = '';
+    players.forEach(function (p, i) {
+      var d = document.createElement('div');
+      d.className = 'slot' + ((i === mySeat) ? ' me' : '');
+      var tagCls = p.kind === 'you' ? 'you' : (p.kind === 'ai' ? 'cpu' : 'human');
+      var tagTxt = p.kind === 'you' ? 'You' : (p.kind === 'ai' ? currentDiff() : 'Player');
+      var stat;
+      if (p.kind === 'ai') stat = '';
+      else stat = p.personaId ? ('★ ' + pName(p.personaId)) : 'choosing…';
+      d.innerHTML = '<span class="name">' + escapeHtml(p.name) + '</span>' +
+        '<span class="pickstat">' + stat + '</span><span class="tag ' + tagCls + '">' + tagTxt + '</span>';
+      slotsEl.appendChild(d);
+    });
+  }
+
+  function refreshStart() {
+    var players = (rosterState && rosterState.get()) ? rosterState.get().players : [];
+    if (!isHost) { startBtn.style.display = 'none'; addAiBtn.style.display = 'none'; return; }
+    startBtn.style.display = ''; addAiBtn.style.display = '';
+    var ok = players.length >= 2 && players.every(function (p) { return p.kind === 'ai' || !!p.personaId; });
+    startBtn.disabled = !ok;
+    addAiBtn.disabled = players.length >= 4;
+  }
+
+  function setStatus(t) { statusEl.textContent = t || ''; }
+
+  // ---- hero picker (local user's seat) ------------------------------------
+  function reservedByOthers() {
+    var s = {};
+    if (!rosterState) return s;
+    rosterState.get().players.forEach(function (p) {
+      if (p.personaId && p.userId !== myUserId) s[p.personaId] = true; // others' picks are locked
+    });
+    return s;
+  }
+  function buildPicker() {
+    pgrid.innerHTML = '';
+    PERSONAS.forEach(function (id) {
+      var d = document.createElement('button'); d.type = 'button'; d.className = 'po-card';
+      d.setAttribute('aria-label', pName(id)); d.innerHTML = '<img src="' + img(id) + '" alt="">';
+      d.addEventListener('click', function () { commitPick(id); });
+      pgrid.appendChild(d);
+    });
+    var rnd = document.createElement('button'); rnd.type = 'button'; rnd.className = 'po-random'; rnd.textContent = 'Random';
+    rnd.addEventListener('click', function () {
+      var avail = PERSONAS.filter(function (id) { return !reservedByOthers()[id]; });
+      if (!avail.length) return;
+      commitPick(avail[Math.floor(Math.random() * avail.length)]);
+    });
+    pgrid.appendChild(rnd);
+  }
+  function refreshPicker() {
+    var taken = reservedByOthers();
+    var mine = (rosterState && mySeat >= 0) ? rosterState.get().players[mySeat].personaId : null;
+    Array.prototype.forEach.call(pgrid.children, function (el, idx) {
+      if (!el.classList.contains('po-card')) return;
+      var id = PERSONAS[idx];
+      el.classList.toggle('taken', !!taken[id]);
+      el.classList.toggle('mine', mine === id);
+    });
+  }
+
+  function commitPick(id) {
+    if (isHost) {
+      rosterState.set({ players: setPickAt(mySeat, id) }); // host writes its own entry directly
+    } else {
+      pickAction.send({ pick: id }, { target: hostUserId() }).catch(function () {});
+    }
+  }
+
+  function hostUserId() { return (rosterState && rosterState.get().players[0]) ? rosterState.get().players[0].userId : null; }
+
+  // ---- boot once Trystero is ready ---------------------------------------
+  function boot() {
+    rosterState = room.makeState('roster', { players: [] });
+    pickAction = room.makeAction('pick');
+    beginAction = room.makeAction('begin');
+
+    // Everyone renders the live roster.
+    renderSeats((rosterState.get() || { players: [] }).players);
+    refreshStart();
+    rosterState.onChange(function () { renderSeats(rosterState.get().players); refreshStart(); refreshPicker(); });
+
+    buildPicker();
+    refreshPicker();
+
+    room.onError(function (err) {
+      if (err && err.code === 'room-full') setStatus('Room is full.');
+    });
+
+    // Guests: when the host says go, carry our roster into the game page and move.
+    beginAction.onMessage(function () { persistRoster(); location.href = 'game.html?role=guest&room=' + encodeURIComponent(roomId); });
+
+    // Host-authoritative seating: only the host writes the roster, but every write is an
+    // ATOMIC functional set so a first guest can't clobber the host's seed (or vice-versa).
+    function seatUser(userId, isYou) {
+      rosterState.set(function (cur) {
+        var players = (cur && cur.players) ? cur.players.slice() : [];
+        if (!players.some(function (p) { return p.userId === userId; })) {
+          if (players.length < 4) {
+            var n = players.filter(function (p) { return p.kind !== 'ai'; }).length + 1; // You=1, first guest is Player 2
+            players.push({ userId: userId, name: isYou ? 'You' : ('Player ' + n), kind: isYou ? 'you' : 'human', personaId: null });
+          }
+        }
+        return { players: players };
+      });
+    }
+
+    room.getSelf().then(function (self) {
+      myUserId = self.userId;
+      if (isHost) {
+        seatUser(myUserId, true); // host seats itself first
+        // Seat each friend as they open their link. onUserJoin is the immediate signal; a light
+        // poll is the safety net for anyone already present when we subscribed (no replay needed).
+        room.onUserJoin(function (u) { seatUser(u.userId, false); });
+        var seatPoll = setInterval(function () {
+          var peers = room.getPeers();
+          for (var id in peers) { if (peers[id] && peers[id].userId) seatUser(peers[id].userId, false); }
+        }, 400);
+      }
+      // Everyone learns their own seat from the roster by userId match. The host is seated above;
+      // guests wait until the host seats them. Poll until found (the host finds it on tick one).
+      var iv = setInterval(function () {
+        var players = (rosterState.get() || { players: [] }).players;
+        for (var i = 0; i < players.length; i++) if (players[i].userId === myUserId) { mySeat = i; break; }
+        if (mySeat >= 0) { clearInterval(iv); renderSeats(players); refreshPicker(); }
+      }, 250);
+      pickTitle.textContent = 'Pick your Super Hero as ' + (isHost ? 'You' : 'Player') + '.';
+    });
+
+    // Host receives a friend's hero pick.
+    if (isHost) {
+      pickAction.onMessage(function (d, meta) {
+        var userId = meta.userId;
+        var players = rosterState.get().players.slice();
+        var idx = -1; for (var i = 0; i < players.length; i++) if (players[i].userId === userId) { idx = i; break; }
+        if (idx < 0) return;
+        // No two players may share a Super Hero.
+        var takenByOther = players.some(function (p, j) { return j !== idx && p.personaId === d.pick; });
+        if (!takenByOther) {
+          players[idx].personaId = d.pick;
+          rosterState.set({ players: players });
+        } else {
+          pickAction.send({ taken: true }, { target: userId }).catch(function () {});
+        }
+      });
+    }
+
+    // Guest receives a "that hero is taken" reply.
+    if (!isHost) {
+      pickAction.onMessage(function (d) { if (d.taken) setStatus('That Super Hero is already taken — pick another.'); });
+    }
+  }
+
+  function setPickAt(idx, id) {
+    var players = rosterState.get().players.slice();
+    players[idx].personaId = id;
+    return players;
+  }
+
+  // Save the live roster to this tab's sessionStorage so game.html (a fresh page load) can read it back.
+  // Trystero state is peer-to-peer and dies when every holder navigates away, so we carry picks across.
+  function persistRoster() {
+    try { var ps = rosterState && rosterState.get(); if (ps && ps.players) sessionStorage.setItem('__dc_roster_' + roomId, JSON.stringify(ps)); } catch (e) {}
+  }
+
+  // ---- Start (host only): tell everyone to go, then move ourselves -------
+  startBtn.addEventListener('click', function () {
+    if (startBtn.disabled) return;
+    try { localStorage.setItem('dc_settings', JSON.stringify({ difficulty: currentDiff(), refill: document.getElementById('refillToggle').checked })); } catch (e) {}
+    persistRoster();
+    beginAction.send({}).catch(function () {});
+    location.href = 'game.html?role=host&room=' + encodeURIComponent(roomId);
+  });
+
+  addAiBtn.addEventListener('click', function () {
+    if (!isHost || startBtn.disabled === false && rosterState.get().players.length >= 4) return;
+    var players = rosterState.get().players.slice();
+    if (players.length >= 4) return;
+    players.push({ userId: null, name: 'AI', kind: 'ai', personaId: null });
+    rosterState.set({ players: players });
+  });
+
+  // ---- settings overlay --------------------------------------------------
+  var overlay = document.getElementById('overlay');
+  function closeOverlay() { overlay.classList.remove('open'); }
+  document.getElementById('settingsBtn').addEventListener('click', function () { overlay.classList.add('open'); });
+  document.getElementById('closeX').addEventListener('click', closeOverlay);
+  document.getElementById('doneBtn').addEventListener('click', closeOverlay);
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) closeOverlay(); });
+  Array.prototype.forEach.call(document.querySelectorAll('.pill'), function (p) {
+    p.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.pill'), function (x) { x.classList.remove('active'); });
+      p.classList.add('active');
+      renderSeats((rosterState && rosterState.get()) ? rosterState.get().players : []); // refresh AI tags
+    });
+  });
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+
+  // ---- wait for Trystero (module loads after parse; http(s) only) --------
+  if (window.__DCROOM__) { window.__DCROOM__.joinDCRoom(roomId).then(function (r) { room = r; boot(); }); }
+  else { window.__onDCROOMReady__ = function (m) { m.joinDCRoom(roomId).then(function (r) { room = r; boot(); }); }; setStatus('Connecting…'); }
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DC DeckBuilder</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+    color: #fff;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background-color: #04060c;
+    background-image: url("background.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* Scrim so menu text stays readable over the box art */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(to top, rgba(3,5,10,0.78) 0%, rgba(3,5,10,0.34) 16%, transparent 40%),
+      radial-gradient(ellipse 130% 95% at 50% 42%, rgba(3,5,10,0.14) 0%, rgba(3,5,10,0.42) 72%, rgba(3,5,10,0.8) 100%);
+  }
+
+  .title {
+    z-index: 1;
+    position: relative;
+    font-size: clamp(3rem, 9vw, 6.5rem);
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    text-align: center;
+    color: #fff;
+    margin-bottom: clamp(2.2rem, 7vh, 3.8rem);
+    text-shadow:
+      0 2px 6px rgba(0,0,0,0.85),
+      0 0 16px rgba(255, 45, 60, 0.50),
+      0 0 44px rgba(255, 45, 60, 0.28);
+  }
+
+  .title .dc {
+    color: #ff2d3c;
+    text-shadow:
+      0 2px 6px rgba(0,0,0,0.85),
+      0 0 22px rgba(255, 45, 60, 0.75),
+      0 0 58px rgba(255, 45, 60, 0.38);
+  }
+
+  .menu {
+    z-index: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    align-items: center;
+  }
+
+  .btn {
+    width: min(320px, 78vw);
+    padding: 0.95rem 1rem;
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: #fff;
+    text-align: center;
+    background: linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96));
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.25);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  }
+
+  .btn:focus-visible {
+    outline: 2px solid #ff2d3c;
+    outline-offset: 3px;
+  }
+
+  a.btn {
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97));
+    border-color: rgba(255, 120, 130, 0.5);
+    box-shadow: 0 0 22px rgba(255, 45, 60, 0.3);
+  }
+
+  /* Local pass-and-play setup */
+  .local-setup {
+    z-index: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    align-items: center;
+    width: min(360px, 84vw);
+    padding: 1.2rem 1.3rem;
+    background: rgba(8, 11, 20, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    backdrop-filter: blur(3px);
+  }
+  .local-setup[hidden] { display: none; }
+  .ls-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .ls-sub { margin-bottom: 0.2rem; font-size: 0.9rem; color: rgba(255,255,255,0.8); letter-spacing: 0.03em; }
+  .ls-counts { display: flex; gap: 0.6rem; justify-content: center; }
+  .ls-count { width: auto; padding: 0.7rem 1rem; font-size: 1rem; }
+  .ls-count[aria-pressed="true"] { border-color: rgba(255,45,60,0.8); box-shadow: 0 0 16px rgba(255,45,60,0.35); }
+
+  .legal {
+    position: absolute;
+    bottom: 1.1rem;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    text-align: center;
+    padding: 0 1rem;
+    font-size: 0.72rem;
+    line-height: 1.55;
+    letter-spacing: 0.03em;
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  }
+</style>
+</head>
+<body>
+
+  <h1 class="title"><span class="dc">DC</span> DECKBUILDER</h1>
+
+  <nav class="menu" aria-label="Main menu">
+    <button class="btn btn-primary" type="button" id="startBtn">Start game</button>
+    <button class="btn" type="button" id="localBtn">Local game</button>
+  </nav>
+
+  <!-- Local pass-and-play setup (2-4 players sharing this device) -->
+  <section class="local-setup" id="localSetup" hidden aria-label="Local game setup">
+    <h2 class="ls-title">Local Game</h2>
+    <p class="ls-sub">Pass and play on this device. Choose how many players.</p>
+    <div class="ls-counts">
+      <button type="button" class="btn ls-count" data-n="2" aria-pressed="false">2 Players</button>
+      <button type="button" class="btn ls-count" data-n="3" aria-pressed="false">3 Players</button>
+      <button type="button" class="btn ls-count" data-n="4" aria-pressed="false">4 Players</button>
+    </div>
+    <button class="btn btn-primary" type="button" id="localPlayBtn" disabled>Play</button>
+  </section>
+
+  <footer class="legal">
+    DC UNIVERSE and all related characters and elements are trademarks of and DC Comics<br />
+    Cryptozoic
+  </footer>
+
+<script>
+(function () {
+  "use strict";
+  var q = new URLSearchParams(location.search);
+  var room = (q.get('room') || '').trim();
+  if (room) {
+    // Opened via a shared link -> drop straight into that room as a guest.
+    document.getElementById('startBtn').textContent = 'Joining…';
+    location.replace('lobby.html?role=guest&room=' + encodeURIComponent(room));
+    return;
+  }
+  function newRoomId() {
+    var s = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', out = '';
+    for (var i = 0; i < 6; i++) out += s.charAt(Math.floor(Math.random() * s.length));
+    return out;
+  }
+  document.getElementById('startBtn').addEventListener('click', function () {
+    location.href = 'lobby.html?role=host&room=' + newRoomId();
+  });
+
+  // ---- Local pass-and-play (2-4 humans, one device) ---------------------
+  var localSetup = document.getElementById('localSetup');
+  var playBtn = document.getElementById('localPlayBtn');
+  var counts = Array.prototype.slice.call(localSetup.querySelectorAll('.ls-count'));
+  var chosenN = null;
+  function chooseCount(n) {
+    chosenN = n;
+    counts.forEach(function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-n') === n)); });
+    playBtn.disabled = false;
+  }
+  document.getElementById('localBtn').addEventListener('click', function () {
+    localSetup.hidden = !localSetup.hidden; // toggle the setup panel open/closed
+  });
+  counts.forEach(function (b) { b.addEventListener('click', function () { chooseCount(+b.getAttribute('data-n')); }); });
+  playBtn.addEventListener('click', function () {
+    if (!chosenN) return;
+    var players = [];
+    for (var i = 0; i < chosenN; i++) players.push({ name: 'Player ' + (i + 1), kind: 'human' });
+    try { localStorage.setItem('dc_players', JSON.stringify(players)); } catch (e) {}
+    location.href = 'game.html'; // no ?room= -> local hot-seat path reads dc_players from localStorage
+  });
+})();
+</script>
+
+</body>
+</html>

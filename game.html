@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DC DeckBuilder — Table</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background-color: #070a12;
+    background-image: url("game-background.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* Scrim so table zones read over the art */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 130% 95% at 50% 46%, transparent 30%, rgba(3,5,10,0.38) 72%, rgba(3,5,10,0.7) 100%),
+      linear-gradient(to top, rgba(3,5,10,0.45) 0%, transparent 18%);
+  }
+
+  /* The table is a fixed-aspect stage (10 x 4.6 card-units) centered in the viewport;
+     every zone below is positioned in % of it, so all boxes stay proportionate to cards */
+  .table {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(94vw, calc(94vh * 2.1739));
+    aspect-ratio: 10 / 4.6;
+  }
+
+  /* Players — top-left corner of the screen */
+  .players {
+    position: fixed;
+    top: 16px;
+    left: 18px;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .players-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+  }
+
+  .chip {
+    position: relative;
+    cursor: pointer;
+    min-width: 108px;
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(180deg, #2a3348, #151c2d);
+    border: 2px solid rgba(255,255,255,0.7);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    white-space: nowrap;
+  }
+
+  .chip-hero { width: 42px; height: auto; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,.6); flex: none; }
+  .chip-txt { display: flex; flex-direction: column; align-items: center; line-height: 1.25; }
+  .chip .sub { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.04em; color: rgba(255,255,255,0.7); text-transform: none; margin-top: 2px; }
+  .chip.current { border-color: #ff2d3c; box-shadow: 0 0 0 3px rgba(255,45,60,0.35), 0 3px 10px rgba(0,0,0,0.5); }
+
+  /* Player-chip Location thumbnails (fan off the chip's right edge; click to peek) */
+  .ploc { position:absolute; top:8%; width:52px; aspect-ratio:2.5/3.5; border-radius:4px; overflow:hidden; background:#0a0f1c; border:1px solid rgba(150,195,255,.4); box-shadow:0 1px 4px rgba(0,0,0,.6); cursor:pointer; z-index:1; }
+  .ploc img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  .ploc:hover { transform: scale(1.28); z-index:40; box-shadow:0 3px 10px rgba(0,0,0,.7); }
+
+  .turn-now {
+    position: fixed;
+    top: 18px;
+    right: 24px;
+    z-index: 5;
+    padding: 0.4rem 1rem;
+    border-radius: 8px;
+    background: rgba(4,6,12,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.75);
+  }
+
+  .turn-now b { color: #fff; font-weight: 800; }
+
+  /* End Game — centered at the top of the screen */
+  .endgame {
+    position: fixed;
+    left: 50%;
+    top: 16px;
+    transform: translateX(-50%);
+    z-index: 5;
+    padding: 0.5rem 1.4rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96));
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+  }
+
+  .endgame:hover { transform: translateX(-50%) translateY(-2px); filter: brightness(1.25); }
+
+  /* Line-Up row */
+  .slot {
+    position: absolute;
+    background: rgba(6,10,20,0.45);
+    border: 2px solid rgba(150,195,255,0.7);
+    border-radius: 6px;
+    box-shadow: inset 0 0 14px rgba(120,170,255,0.15), 0 3px 12px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .slot .lbl { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.75); }
+  .slot .count { position:absolute; bottom:4px; right:6px; font-size:0.7rem; font-weight:800; color:#fff; text-shadow:0 1px 2px #000; }
+
+  .slot.destroyed { border-color: rgba(255,120,130,0.6); box-shadow: inset 0 0 14px rgba(255,45,60,0.12), 0 0 18px rgba(255,45,60,0.22); }
+
+  .lu-slot { position:absolute; cursor:default; z-index:10; }
+  .lu-slot.buyable { border-color:#ffd24a; box-shadow: inset 0 0 16px rgba(255,210,74,0.2), 0 0 18px rgba(255,210,74,0.3); cursor:pointer; }
+  .lu-slot img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6)); }
+
+  /* Line-Up overflow (cards added by an effect when all 5 slots are full): shown overlapping past the last slot */
+  /* Line-Up overflow (cards added by an effect when all 5 slots are full):
+     layered BEHIND the main line-up at the same size, fanned up so they peek out and stay readable. */
+  .lu-extras { position:absolute; inset:0; pointer-events:none; }
+  .lu-extra { position:absolute; width:10%; height:30.43%; z-index:6; border-radius:5px; overflow:hidden; background:#0a0f1c; border:1px solid rgba(150,195,255,0.4); box-shadow:0 1px 4px rgba(0,0,0,.6); pointer-events:auto; cursor:pointer; transition: transform .12s ease; }
+  .lu-extra img { width:100%; height:100%; object-fit:contain; pointer-events:none; filter: drop-shadow(0 1px 3px rgba(0,0,0,.6)); }
+  .lu-extra.buyable { border-color:#ffd24a; box-shadow: inset 0 0 12px rgba(255,210,74,0.2), 0 0 14px rgba(255,210,74,0.3); }
+  .lu-extra:hover { transform: scale(1.16); z-index:40; }
+
+
+  .lu-label {
+    position: absolute; left: 36%; top: 21.4%; transform: translateX(-50%);
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase;
+    color: rgba(255,255,255,0.8); padding: 0.18rem 0.8rem; border-radius: 999px; background: rgba(4,6,12,0.55);
+  }
+
+  /* Right column — public stacks */
+  .pile {
+    position: absolute; display: flex; align-items: center; justify-content: center; text-align: center;
+    background: rgba(6,10,20,0.45); border: 2px solid rgba(150,195,255,0.7); border-radius: 6px;
+    box-shadow: inset 0 0 14px rgba(120,170,255,0.15), 0 3px 12px rgba(0,0,0,0.4);
+    transform: translate(-50%, -50%);
+  }
+  .pile .lbl { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.8); position:absolute; top:4px; left:6px; }
+  .pile .count { position:absolute; left:-26px; top:50%; transform:translateY(-50%); font-size:1rem; font-weight:800; color:#fff; text-shadow:0 1px 2px #000; }
+  .pile img.topcard { width:100%; height:100%; object-fit:cover; border-radius:4px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6)); }
+
+  .p-sv.can-buy, .p-kick.can-buy { cursor:pointer; border-color:#ffd24a; box-shadow: inset 0 0 14px rgba(255,210,74,0.2), 0 0 16px rgba(255,210,74,0.3); }
+
+  /* Player Hand — bottom center */
+  .hand {
+    position: absolute; background: rgba(6,10,20,0.38); border: 2px solid rgba(150,195,255,0.5);
+    border-radius: 8px; box-shadow: inset 0 0 18px rgba(120,170,255,0.1), 0 3px 12px rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center; padding: 8px; overflow: hidden;
+    container-type: size; /* children can size relative to this box */
+  }
+  .hand .lbl { position:absolute; top:5px; left:12px; font-size:0.7rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.5); }
+  #handCards { display:flex; flex-wrap:nowrap; gap:0; justify-content:center; align-items:center; width:100%; height:100%; }
+  /* Hand cards scale proportionately with the blue box (container-query units). */
+  .hcard { aspect-ratio: 2.5/3.5; width: 140px; width: min(calc((100cqw - 30px) / 6), calc(90cqh * 2.5 / 3.5)); border-radius:5px; overflow:hidden; position:relative; padding:0; font-family:inherit; background:#0a0f1c; border:1px solid rgba(150,195,255,0.4); transition: transform .12s ease; }
+  .hcard:hover { transform: scale(1.3); z-index: 40; }
+  .hcard img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  .hcard.playable { cursor:pointer; box-shadow:0 0 0 2px rgba(255,210,74,0.8); }
+  .hcard.playable:hover { filter:brightness(1.15); }
+  .hcard.back { background: linear-gradient(160deg, #2b3a52, #141b2e); border-color: rgba(150,195,255,.5); cursor: default; }
+
+  /* Card interactions — hover to enlarge */
+  .lu-slot { transition: transform .12s ease; }
+  .lu-slot:hover { transform: scale(1.16); z-index: 40; }
+  .po-card { transition: transform .12s ease; }
+  .po-card:hover { transform: scale(1.05); }
+  .pile img.topcard, .dstk img { transition: transform .12s ease; }
+  .deckback { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); pointer-events:none; }
+  .dstk { position:absolute; inset:0; pointer-events:none; }
+  .dstk img { position:absolute; bottom:0; width:94%; height:auto; object-fit:contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,.6)); }
+
+  /* Phase action bar (To Buying / buys / End Turn) */
+  #phaseBar { position: fixed; left:16px; bottom:18px; z-index:6; display:none; flex-direction:column; align-items:flex-start; gap:6px; max-width:min(720px,52vw); }
+  #phaseBar.show { display:flex; }
+  #playedRow { display:none; gap:3px; flex-wrap:wrap; width:max-content; pointer-events:none; }
+  .played-card img { width:34px; aspect-ratio:2.5/3.5; object-fit:contain; border-radius:3px; background:#0a0f1c; border:1px solid rgba(255,210,74,.7); box-shadow:0 1px 3px rgba(0,0,0,.6); }
+  #phaseButtons { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-start; }
+  .abtn { font-family:inherit; font-size:0.8rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#fff; padding:0.5rem 0.9rem; border-radius:8px; cursor:pointer; background:linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border:1px solid rgba(255,255,255,0.3); transition:filter .15s ease; }
+  .abtn:hover { filter:brightness(1.3); }
+  .abtn.primary { background:linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97)); border-color:rgba(255,120,130,0.5); }
+
+  /* Peek overlay — big card; click the backdrop or X to close */
+  #peek { position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,.6); }
+  #peek.show { display:flex; }
+  .peek-card { aspect-ratio:2.5/3.5; width:min(46vh,42vw); position:relative; margin:0; }
+  .peek-card img { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 6px 24px rgba(0,0,0,.8)); pointer-events:none; }
+  .peek-card figcaption { position:absolute; left:50%; bottom:-1.7rem; transform:translateX(-50%); font-size:1.1rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#fff; white-space:nowrap; }
+  .peek-x { position:absolute; top:14px; right:20px; z-index:21; width:34px; height:34px; border-radius:50%; font-size:1.4rem; line-height:1; color:#fff; background:rgba(4,6,12,.7); border:1px solid rgba(255,255,255,.3); cursor:pointer; }
+
+  /* Choice modal (defense / pending) */
+  #choiceModal { position:fixed; inset:0; z-index:8; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.55); }
+  #choiceModal.show { display:flex; }
+  .cm-panel { width:min(460px,90vw); max-height:82vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:14px; padding:1.3rem; box-shadow:0 18px 60px rgba(0,0,0,0.6); }
+  .cm-title { font-size:1.05rem; font-weight:900; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.4rem; color:#fff; }
+  .cm-hint { font-size:0.82rem; line-height:1.5; color:rgba(255,255,255,0.7); margin-bottom:0.6rem; white-space:pre-line; }
+  .cm-cards { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 0 0.9rem; }
+  .cm-cards:empty { display:none; }
+  .cm-card { position:relative; width:76px; aspect-ratio:2.5/3.5; border-radius:6px; overflow:hidden; background:#0a0f1c; border:1px solid rgba(150,195,255,.4); }
+  .cm-card img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  .cm-actions { display:flex; flex-direction:column; gap:0.6rem; }
+  .cm-btn { font-family:inherit; font-size:0.9rem; font-weight:700; letter-spacing:0.04em; text-align:left; color:#fff; padding:0.65rem 0.9rem; border-radius:8px; cursor:pointer; background:rgba(42,51,72,0.9); border:1px solid rgba(255,255,255,0.28); transition:filter .15s ease; }
+  .cm-btn:hover { filter:brightness(1.3); }
+
+  /* Event log — bottom-right */
+  #logPanel { position:absolute; right:5%; top:87.5%; z-index:5; width:min(26vw,380px); max-height:11vh; overflow-y:auto; background:rgba(4,6,12,0.78); border:1px solid rgba(255,255,255,0.22); border-radius:10px; padding:0.5rem 0.7rem; font-size:0.85rem; line-height:1.4; color:rgba(255,255,255,0.86); }
+  #logPanel .ll { border-bottom:1px solid rgba(255,255,255,0.06); padding:2px 0; }
+  #logPanel .ll:last-child { color:#fff; font-weight:600; }
+
+  /* Persona pre-game overlay */
+  #personaOverlay { position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; background:rgba(3,5,10,0.82); }
+  #netPanel { position:fixed; inset:0; z-index:21; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.86); }
+  .np-panel { width:min(640px,92vw); max-height:90vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); }
+  .np-title { font-size:1.4rem; font-weight:900; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.3rem; }
+  .np-sub { font-size:0.85rem; color:rgba(255,255,255,0.6); margin-bottom:1.1rem; line-height:1.5; }
+  .np-step { font-weight:700; letter-spacing:0.06em; text-transform:uppercase; font-size:0.8rem; color:#ff2d3c; margin:0.9rem 0 0.3rem; }
+  #netPanel textarea { width:100%; min-height:74px; resize:vertical; background:rgba(6,9,16,0.9); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:0.5rem; font-family:ui-monospace,Consolas,monospace; font-size:0.72rem; word-break:break-all; }
+  #netPanel button { margin-top:0.6rem; width:100%; font-family:inherit; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#fff; background:linear-gradient(180deg,#2b3a52,#141b2e); border:1px solid rgba(150,195,255,0.5); border-radius:8px; padding:0.7rem 0; cursor:pointer; }
+  #netPanel button:hover { filter:brightness(1.2); }
+  .np-status { margin-top:0.9rem; font-size:0.85rem; color:#43d675; line-height:1.5; min-height:1em; }
+  .np-code { width:100%; min-height:52px; max-height:120px; overflow-y:auto; background:rgba(6,9,16,0.9); color:#cfe3ff; border:1px dashed rgba(150,195,255,0.4); border-radius:8px; padding:0.5rem; font-family:ui-monospace,Consolas,monospace; font-size:0.7rem; line-height:1.35; word-break:break-all; user-select:text; white-space:normal; }
+  .np-code.empty { color:rgba(255,255,255,0.4); }
+  .np-peer { margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.12); }
+  .np-peer:last-child { border-bottom:none; margin-bottom:0; }
+  .np-peer .np-step { color:#fff; font-size:0.9rem; letter-spacing:0.04em; text-transform:none; }
+  .po-panel { width:min(640px,92vw); max-height:90vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); }
+  .po-title { font-size:1.4rem; font-weight:900; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.3rem; }
+  .po-sub { font-size:0.85rem; color:rgba(255,255,255,0.6); margin-bottom:1.1rem; line-height:1.5; }
+  .po-status { font-size:0.8rem; color:#43d675; margin-bottom:1.1rem; min-height:1em; line-height:1.5; letter-spacing:0.02em; }
+  .po-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:0.7rem; }
+  .po-card { position:relative; aspect-ratio:2.5/3.5; border-radius:8px; overflow:hidden; cursor:pointer; padding:0; font-family:inherit; background:#0a0f1c; border:2px solid rgba(255,255,255,0.2); }
+  .po-card img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  .po-card.sel { border-color:#ff2d3c; box-shadow:0 0 0 3px rgba(255,45,60,0.4); }
+  .po-random { aspect-ratio:auto; display:flex; align-items:center; justify-content:center; font-family:inherit; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:#fff; padding:0; cursor:pointer; background:rgba(42,51,72,0.9); border:2px dashed rgba(255,255,255,0.35); }
+  .po-random.sel { border-color:#ff2d3c; box-shadow:0 0 0 3px rgba(255,45,60,0.4); }
+  .po-begin { margin-top:1.1rem; width:100%; padding:0.9rem 1rem; font-family:inherit; font-size:1rem; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:#fff; background:linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97)); border:1px solid rgba(255,120,130,0.5); border-radius:10px; cursor:pointer; box-shadow:0 0 18px rgba(255,45,60,0.25); }
+  .po-begin[disabled]{ opacity:0.5; cursor:not-allowed; }
+
+  /* Results overlay */
+  #resultsOverlay { position:fixed; inset:0; z-index:15; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.8); }
+  #resultsOverlay.show { display:flex; }
+  .rs-panel { width:min(420px,90vw); background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); text-align:center; }
+  .rs-title { font-size:1.3rem; font-weight:900; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:1rem; color:#fff; }
+  .rs-row { display:flex; justify-content:space-between; gap:1rem; padding:0.5rem 0.7rem; border-radius:8px; background:rgba(255,255,255,0.06); margin-bottom:0.5rem; font-weight:700; letter-spacing:0.04em; }
+  .rs-row.win { outline:2px solid #ffd24a; }
+  .rs-btn { margin-top:1rem; width:100%; padding:0.8rem 1rem; font-family:inherit; font-size:0.95rem; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#fff; background:linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; }
+  .rs-btn:hover { filter:brightness(1.25); }
+
+  .legal { position:absolute; bottom:0.6rem; left:0; right:0; z-index:1; text-align:center; padding:0 1rem; font-size:0.68rem; line-height:1.4; letter-spacing:0.03em; color:rgba(255,255,255,0.7); text-shadow:0 1px 3px rgba(0,0,0,0.9); }
+</style>
+</head>
+<body>
+
+  <div class="players" aria-label="Players">
+    <span class="players-label">Players</span>
+    <div id="playerStack"></div>
+    <div class="you-persona" id="youPersona" aria-hidden="true"></div>
+  </div>
+
+  <button class="endgame" type="button" id="endGameBtn">End Game</button>
+
+  <span class="turn-now" id="turnNow"></span>
+
+  <div class="table">
+    <div class="lu-label">Line Up</div>
+    <div class="slot destroyed" style="left:0%;     top:25%; width:10%; height:30.43%"><span class="lbl">Destroyed</span><div class="dstk" id="destroyedStack"></div><span class="count" id="cDestroyed"></span></div>
+    <div class="slot"           style="left:11.5%;  top:25%; width:10%; height:30.43%"><img class="deckback" id="deckBack" src="assets/cards/cardback.jpg" alt=""><span class="lbl">Main Deck</span><span class="count" id="cMainDeck"></span></div>
+    <div class="lu-slot" data-i="0" style="left:23%;   top:25%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="1" style="left:34.5%; top:25%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="2" style="left:46%;   top:25%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="3" style="left:57.5%; top:25%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="4" style="left:69%;   top:25%; width:10%; height:30.43%"></div>
+    <div class="lu-extras" id="luExtras"></div>
+
+    <div class="pile" style="left:89%; top:8%; width:10%; height:30.43%"><img class="topcard" id="weakTop" src="assets/cards/weakness.jpg" alt=""><span class="count" id="cWeak"></span></div>
+    <div class="pile p-sv" style="left:89%; top:40%; width:10%; height:30.43%"><img class="topcard" id="svTop" alt=""><span class="count" id="cSv"></span></div>
+    <div class="pile p-kick" style="left:89%; top:72%; width:10%; height:30.43%"><img class="topcard" id="kickTop" src="assets/cards/kick.jpg" alt=""><span class="count" id="cKick"></span></div>
+
+    <div class="hand" style="left:0%; top:58.7%; width:79%; height:32.6%"><span class="lbl">Your Hand</span><div id="handCards"></div></div>
+    <div id="logPanel" aria-label="Event log"></div>
+  </div>
+
+  <div id="phaseBar"><div id="playedRow"></div><div id="phaseButtons"></div></div>
+
+  <div id="choiceModal"><div class="cm-panel">
+    <div class="cm-title" id="cmTitle"></div>
+    <div class="cm-hint" id="cmHint"></div>
+    <div class="cm-cards" id="cmCards"></div>
+    <div class="cm-actions" id="cmActions"></div>
+  </div></div>
+
+  <div id="peek"><button type="button" class="peek-x" id="peekX">&times;</button><figure class="peek-card"><img id="peekImg" alt=""><figcaption id="peekName"></figcaption></figure></div>
+
+  <!-- Persona pre-game -->
+  <div id="personaOverlay"><div class="po-panel">
+    <div class="po-title">Choose your Super Hero</div>
+    <div class="po-sub">Pick one of the seven — or roll Random. AI opponents each roll a distinct hero.</div>
+    <div class="po-status" id="personaStatus"></div>
+    <div class="po-grid" id="personaGrid"></div>
+    <button class="po-begin" type="button" id="beginBtn" disabled>Begin Game</button>
+  </div></div>
+
+  <!-- Online rejoin status (Trystero room) -->
+  <div id="netPanel"><div class="np-panel">
+    <div class="np-title" id="npTitle"></div>
+    <div class="np-sub" id="npSub"></div>
+    <div class="np-status" id="netStatus"></div>
+  </div></div>
+
+  <!-- Results -->
+  <div id="resultsOverlay"><div class="rs-panel">
+    <div class="rs-title">Final Scores</div>
+    <div id="rsRows"></div>
+    <button class="rs-btn" type="button" id="rsLobby">Back to Lobby</button>
+  </div></div>
+
+  <footer class="legal">DC UNIVERSE and all related characters and elements are trademarks of and DC Comics<br />Cryptozoic</footer>
+
+<script src="cards.js"></script>
+<script src="engine.js"></script>
+<script src="engine-cards.js"></script>
+<script src="ai.js"></script>
+<!-- Trystero (online only). Loaded as ES modules via the import map below; over file://
+     (local pass-and-play) these simply don't load and are never used. -->
+<script type="importmap">
+{ "imports": {
+  "trystero": "./trystero/pkg-trystero/dist/index.js",
+  "@trystero-p2p/nostr": "./trystero/pkg-nostr/dist/index.js",
+  "@trystero-p2p/core": "./trystero/pkg-core/dist/index.js",
+  "@noble/secp256k1": "./trystero/pkg-secp256k1/index.js"
+}}
+</script>
+<script type="module" src="./trystero/room.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function C(id) { return DCCARDS.byId[id]; }
+  function img(id) { return 'assets/cards/' + id + '.jpg'; }
+
+  /* ---- players carried over from the lobby ---------------------- */
+  var seats = [{ name: "You", kind: "you" }];
+  try {
+    var saved = JSON.parse(localStorage.getItem("dc_players") || "null");
+    if (saved && saved.length) seats = saved;
+  } catch (e) {}
+
+  var settings = { difficulty: "Medium", refill: false };
+  try {
+    var s2 = JSON.parse(localStorage.getItem("dc_settings") || "null");
+    if (s2) settings = s2;
+  } catch (e) {}
+  var aiLevel = ({ Easy: 'easy', Medium: 'medium', Hard: 'hard' })[settings.difficulty] || 'medium';
+
+  var PERSONAS = DCCARDS.cards.filter(function (c) { return c.type === 'persona'; }).map(function (c) { return c.id; });
+  function pName(id) { return C(id).name.replace('-mc', ''); }
+
+  /* ================= persona pre-game =========================== */
+  var youPick = null;      // specific id or 'random'
+  var roll = null;         // resolved personaId per seat (index-aligned to seats)
+
+  function shuffleArr(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  function derive() {
+    var n = seats.length, assigned = new Array(n);
+    for (var i = 0; i < n; i++) assigned[i] = null;
+    if (youPick && youPick !== 'random') assigned[0] = youPick;
+    var used = {}; if (assigned[0]) used[assigned[0]] = true;
+    var pool = shuffleArr(PERSONAS.filter(function (id) { return !used[id]; }));
+    var k = 0;
+    for (i = 0; i < n; i++) { if (!assigned[i]) assigned[i] = pool[k++]; }
+    return assigned;
+  }
+
+  function renderPersona() {
+    var grid = document.getElementById('personaGrid');
+    grid.innerHTML = '';
+    PERSONAS.forEach(function (id) {
+      var d = document.createElement('button');
+      d.type = 'button';
+      d.className = 'po-card' + (youPick === id ? ' sel' : '');
+      d.setAttribute('aria-label', pName(id));
+      d.innerHTML = '<img src="' + img(id) + '" alt="">';
+      d.addEventListener('click', function () { setYouPick(id); });
+      grid.appendChild(d);
+    });
+    var rnd = document.createElement('button');
+    rnd.type = 'button';
+    rnd.className = 'po-random' + (youPick === 'random' ? ' sel' : '');
+    rnd.textContent = 'Random';
+    rnd.addEventListener('click', function () { setYouPick('random'); });
+    grid.appendChild(rnd);
+
+    var beginBtn = document.getElementById('beginBtn');
+    // Don't reveal the rolled Super Heroes here — a Random pick stays hidden until in-game.
+    if (!roll) { beginBtn.disabled = true; return; }
+    beginBtn.disabled = false;
+  }
+
+  function setYouPick(v) { youPick = v; roll = derive(); renderPersona(); }
+
+  /* ================= table state ================================ */
+  var st = null, running = false, aiTimer = null, lastDefeated = null;
+  // Seats THIS client controls. Local/hot-seat: every human seat is local (all on this device).
+  // Online: narrowed to just this player's own seat once we confirm it from the room roster.
+  var mySeats = [];
+  for (var _mi = 0; _mi < seats.length; _mi++) { if (seats[_mi].kind !== 'ai') mySeats.push(_mi); }
+  function isMine(i) { return mySeats.indexOf(i) >= 0; }
+  function isAiSeat(i) { return !!seats[i] && seats[i].kind === 'ai'; }
+
+  // ---- P2P / online sync (Trystero room) ---------------------------
+  // Role from the lobby (?role=host|guest). The roster + picks live in the shared Trystero
+  // room state, so both pages re-join by roomId and read it back — no WebRTC invite codes.
+  var _q = new URLSearchParams(location.search);
+  var _role = _q.get('role');                 // 'host' | 'guest' | null (local pass-and-play)
+  var roomId = (_q.get('room') || '').trim();
+  var isHostPeer = (_role !== 'guest');      // host + local run the engine; guest renders snapshots
+  if (_role === 'guest') { mySeats = []; }   // guest: seat + roster come from in-room state
+  else if (_role === 'host') { mySeats = [0]; } // host renders locally until its seat is confirmed
+  var AI_DELAY = 260;
+
+  // Trystero room handles (filled by bootOnline once the module loads).
+  var room = null, rosterState = null, stateAction = null, actAction = null, savedRoster = null;
+  var myUserId = null, began = false, acked = {};
+
+  function decisionOwner(s) {
+    if (s.pending) return (s.attackQueue && s.attackQueue.awaiting) ? s.attackQueue.targets[0] : s.turn.idx;
+    if (s.attackQueue) return s.attackQueue.targets[0];
+    return s.turn.idx;
+  }
+
+  /* ---- rendering ------------------------------------------------ */
+  // Hand keeps full-size cards always; when there are many they OVERLAP (never shrink) so they stay one readable row.
+  function layoutHand() {
+    var hcEl = document.getElementById('handCards');
+    if (!hcEl || hcEl.children.length < 2) return;
+    var avail = hcEl.clientWidth;                        // content width of the hand row
+    var cw = hcEl.children[0].offsetWidth || 140;        // full-size card width (px)
+    var n = hcEl.children.length;
+    var step = Math.min(cw, Math.max(cw * 0.34, (avail - cw) / (n - 1))); // keep >=~34% peek so each stays clickable
+    for (var i = 1; i < n; i++) hcEl.children[i].style.marginLeft = ((step - cw)) + 'px'; // negative -> overlap
+  }
+  window.addEventListener('resize', function () { if (st && !st.over) layoutHand(); });
+
+  function render() {
+    if (!st) return; // online guest before its first state arrives
+    // players stack
+    var ps = document.getElementById('playerStack');
+    ps.innerHTML = '';
+    st.players.forEach(function (p, i) {
+      var cur = (i === st.turn.idx);
+      var c = document.createElement('div');
+      c.className = 'chip' + (cur ? ' current' : '');
+      c.setAttribute('data-i', i);
+      var sub = 'Deck ' + p.deck.length + ' · Hand ' + p.hand.length;
+      if (cur) sub += ' · P' + st.turn.power;
+      c.innerHTML = '<img class="chip-hero" src="' + img(p.personaId) + '" alt="">' +
+        '<span class="chip-txt"><span>' + p.name + '</span><span class="sub">' + sub + '</span></span>';
+      // Played Locations: hug the right edge of this player's chip (click to peek)
+      var locs = p.locations;
+      for (var li = 0; li < locs.length; li++) {
+        var ld = document.createElement('div');
+        ld.className = 'ploc';
+        ld.setAttribute('data-id', locs[li]);
+        ld.style.left = 'calc(100% + ' + (li * 20) + 'px)';
+        ld.innerHTML = '<img src="' + img(locs[li]) + '" alt="">';
+        c.appendChild(ld);
+      }
+      ps.appendChild(c);
+    });
+
+    document.getElementById('turnNow').innerHTML =
+      'Now: <b>' + st.players[st.turn.idx].name + '</b> · ' + (st.turn.phase === 'action' ? 'Action' : 'Buying');
+
+    // public zones
+    document.getElementById('cDestroyed').textContent = st.destroyed.length;
+    document.getElementById('cMainDeck').textContent = st.faceDown.length;
+    document.getElementById('cWeak').textContent = st.weaknessStack.length;
+    document.getElementById('cKick').textContent = st.kickStack.length;
+    document.getElementById('cSv').textContent = st.svStack.length;
+    var svTop = document.getElementById('svTop');
+    if (st.svStack[0]) { svTop.src = img(st.svStack[0]); svTop.style.display = ''; } else { svTop.removeAttribute('src'); svTop.style.display = 'none'; }
+    // Kick / Weakness piles always show a card face; hide when empty
+    document.getElementById('kickTop').style.display = st.kickStack.length ? '' : 'none';
+    document.getElementById('weakTop').style.display = st.weaknessStack.length ? '' : 'none';
+    // Main Deck is face-down: show the card back while cards remain
+    document.getElementById('deckBack').style.display = st.faceDown.length ? '' : 'none';
+    // Destroyed pile: fan out the most recent destroyed cards (piled in the box)
+    var dstk = document.getElementById('destroyedStack');
+    dstk.innerHTML = '';
+    var dTail = st.destroyed.slice(-4);
+    for (var di = 0; di < dTail.length; di++) {
+      var dim = document.createElement('img');
+      dim.src = img(dTail[di]);
+      dim.style.left = (6 + di * 5) + '%';
+      dstk.appendChild(dim);
+    }
+
+    // line-up slots
+    var buyingYou = (!st.pending && !st.attackQueue && st.turn.phase === 'buying' && isMine(st.turn.idx));
+    for (var i = 0; i < 5; i++) {
+      var slotEl = document.querySelector('.lu-slot[data-i="' + i + '"]');
+      var id = st.lineup[i];
+      if (id) {
+        slotEl.innerHTML = '<img src="' + img(id) + '" alt="">';
+        slotEl.classList.toggle('buyable', buyingYou && C(id).cost <= st.turn.power);
+      } else { slotEl.innerHTML = ''; slotEl.classList.remove('buyable'); }
+    }
+
+    // Pile buys: highlight + enable clicking when affordable on your Buying turn
+    var acts = buyingYou ? DCENGINE.actions(st) : [];
+    document.querySelector('.p-kick').classList.toggle('can-buy', !!acts.some(function (a) { return a.kind === 'buy-kick'; }));
+    var topSv2 = st.svStack[0];
+    document.querySelector('.p-sv').classList.toggle('can-buy', !!topSv2 && acts.some(function (a) { return a.kind === 'defeat-sv' && a.cardId === topSv2; }));
+
+    // Line-Up overflow cards (index >= 5): shown overlapping past the last slot
+    var luEx = document.getElementById('luExtras');
+    luEx.innerHTML = '';
+    var luSlotLefts = [23, 34.5, 46, 57.5, 69]; // left edge of each base slot (matches the .lu-slot markup)
+    for (var ei = 5; ei < st.lineup.length; ei++) {
+      var eid = st.lineup[ei];
+      if (!eid) continue;
+      var k = ei - 5; // 0-based extra index
+      var col = k % 5, row = Math.floor(k / 5); // which slot it sits behind (+ how far up the stack)
+      var ed = document.createElement('div');
+      ed.className = 'lu-extra' + (buyingYou && C(eid).cost <= st.turn.power ? ' buyable' : '');
+      ed.setAttribute('data-i', ei);
+      // Directly behind its own slot, left to right down the line-up; small up-offset so it peeks out and stays readable.
+      ed.style.left = luSlotLefts[col] + '%';
+      ed.style.top = (18 - row * 6) + '%';
+      ed.innerHTML = '<img src="' + img(eid) + '" alt="">';
+      luEx.appendChild(ed);
+    }
+
+    // Active player's hand: revealed only while it's THEIR turn and they're a seat this client controls.
+    var hc = document.getElementById('handCards');
+    hc.innerHTML = '';
+    var tIdx = st.turn.idx;
+    var myTurn = isMine(tIdx);
+    var hlbl = document.querySelector('.hand .lbl');
+    if (myTurn) {
+      var hp = st.players[tIdx];
+      if (hlbl) hlbl.textContent = 'Your Hand — ' + hp.name;
+      var actYou = (!st.pending && !st.attackQueue && st.turn.phase === 'action' && isMine(st.turn.idx));
+      hp.hand.forEach(function (id) {
+        var d = document.createElement('button');
+        d.type = 'button';
+        d.className = 'hcard' + (actYou ? ' playable' : '');
+        d.setAttribute('aria-label', C(id).name);
+        d.innerHTML = '<img src="' + img(id) + '" alt="">';
+        if (actYou) d.addEventListener('click', function () { doHuman({ kind: 'play', cardId: id }); });
+        hc.appendChild(d);
+      });
+    } else {
+      if (hlbl) hlbl.textContent = isAiSeat(tIdx) ? st.players[tIdx].name + ' — thinking…' : 'Waiting for ' + st.players[tIdx].name;
+      var hp2 = st.players[tIdx];
+      for (var hb = 0; hb < hp2.hand.length; hb++) {
+        var bd = document.createElement('div');
+        bd.className = 'hcard back';
+        hc.appendChild(bd);
+      }
+    }
+    layoutHand(); // keep full size; overlap when there are many (see above)
+
+    // event log (newest last; keep it short — full history still scrolls up)
+    var lp = document.getElementById('logPanel');
+    var tail = st.log.slice(-9);
+    lp.innerHTML = tail.map(function (l) { return '<div class="ll">' + escapeHtml(l) + '</div>'; }).join('');
+    lp.scrollTop = lp.scrollHeight;
+
+    renderControls();
+  }
+
+  function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  /* ---- human controls (phase bar + choice modal) --------------- */
+  function labelFor(a) {
+    if (a.kind) {
+      switch (a.kind) {
+        case 'play': return 'Play ' + C(a.cardId).name;
+        case 'to-buying': return 'To Buying';
+        case 'buy-lineup': return 'Buy ' + C(st.lineup[a.slot]).name;
+        case 'buy-kick': return 'Buy Kick (3)';
+        case 'defeat-sv': return 'Defeat ' + C(a.cardId).name;
+        case 'riddler-use': return 'Use Riddler (3)';
+        case 'end-buying': return 'End Turn';
+        case 'succumb': return 'Succumb';
+        case 'defend': return 'Defend: ' + C(a.cardId).name;
+      }
+    } else {
+      var pk = st.pending ? st.pending.kind : null;
+      switch (a.k) {
+        case 'pick': return C(a.id) ? C(a.id).name : 'Card';
+        case 'dest': return a.id ? ('Destroy ' + C(a.id).name) : 'Destroy';
+        case 'take': return a.id ? ('Take ' + C(a.id).name) : 'Take';
+        case 'done': return 'Done';
+        case 'yes': return (pk === 'top') ? 'Put on top of deck' : 'Put into your hand';
+        case 'no': return (pk === 'ds') ? "No — take +3 Power" : 'Leave it in Discards';
+        case 'keep': return 'Keep it';
+        case 'even': return 'Even';
+        case 'odd': return 'Odd';
+        case 'skip': return 'Skip';
+        case 'go': return 'Destroy two (+5 Power)';
+        case 'hand': return 'Discard your whole hand';
+        case 'disc': return 'Make them discard a card';
+        case 'draw': return 'You draw a card instead';
+      }
+    }
+    return '?';
+  }
+
+  var PENDING_HINT = {
+    top: 'A card you bought or gained — put it on top of your deck, or leave it in Discards.',
+    hand: 'A card you bought or gained — put it into your hand, or leave it in Discards.',
+    tohand: 'Choose a card from your Discards to return to your hand.',
+    koa: 'King of Atlantis — destroy one of your discards for +3 Power, or keep it for +1.',
+    ek: 'Emerald Knight — take a Line-Up card to play (it returns at end of turn).',
+    cheetah: 'Cheetah — gain a Line-Up card with cost 4 or less.',
+    xray: 'X-Ray Vision — play one revealed card for its effect; it stays atop that player\'s deck.',
+    tf: 'Two-Face — is the top card even or odd cost?',
+    sgirl: 'Supergirl — take a Kick from the stack into your hand?',
+    nth: 'Nth Metal — you peeked the top of your deck. Destroy it, or keep it.',
+    cf: 'Clayface — play one of the cards you played this turn again.',
+    penguin: 'The Penguin — choose two cards in your hand to discard.',
+    lobo: 'Lobo — destroy up to two cards from your hand or discards.',
+    hv: 'Heat Vision — destroy one card from your hand or discards.',
+    zz: "Zatanna Zatara — put up to two of your discards on the bottom of your deck.",
+    bifa: "Brainiac's First Appearance—Attack — choose two cards; they're shuffled and dealt back out.",
+    dsfa: "Deathstroke's First Appearance—Attack — destroy a Hero, Super-Villain, or Equipment.",
+    amfa: "Anti-Monitor's First Appearance—Attack — put one of your cost 1+ cards into the Line-Up.",
+    jkfa: "The Joker's First Appearance—Attack — give a card to the player on your left.",
+    bmfa: "Black Manta's First Appearance—Attack — destroy the revealed card, or discard your whole hand.",
+    jkm: 'The Joker — each foe discards a card, or you draw one instead.',
+    bane: 'Bane — choose a card in your hand to discard.',
+    hq: "Harley Quinn's Attack — put a Punch/Vulnerability from your Discards on top of your deck.",
+    bp: 'Bulletproof — after defending, you may destroy one of your discards.',
+    dsgain: 'Deathstroke — gain the chosen Line-Up card (or take +3 Power).',
+    at: 'Atrocitus — destroy up to two cards from your discards.',
+    ds: 'Darkseid — destroy two cards in your hand for +5 Power, or take +3.',
+    am: 'Anti-Monitor — destroy a Line-Up card (then it is replaced).'
+  };
+
+  function renderControls() {
+    var bar = document.getElementById('phaseBar');
+    var btns = document.getElementById('phaseButtons');
+    var prow = document.getElementById('playedRow');
+    var modal = document.getElementById('choiceModal');
+    if (!st || st.over) { bar.classList.remove('show'); modal.classList.remove('show'); return; }
+    var owner = decisionOwner(st);
+    if (!isMine(owner)) { bar.classList.remove('show'); modal.classList.remove('show'); return; }
+
+    // In-use cards: shown above the buttons for the whole turn (action + buying).
+    renderInUse(prow, st.turn.playedCards);
+
+    // Defense / pending choice -> centered modal
+    if (st.pending || st.attackQueue) {
+      var acts = DCENGINE.actions(st);
+      var cardsEl = document.getElementById('cmCards');
+      if (st.pending) {
+        document.getElementById('cmTitle').textContent = 'Your choice';
+        // On-defeat prompts show the full top effect of the SV you defeated.
+        var hint;
+        if (lastDefeated && C(lastDefeated)) {
+          hint = C(lastDefeated).text || PENDING_HINT[st.pending.kind] || 'Make your choice.';
+        } else {
+          hint = PENDING_HINT[st.pending.kind] || 'Make your choice.';
+        }
+        document.getElementById('cmHint').textContent = hint;
+      } else {
+        var atkCard = C(st.attackQueue.cardId);
+        document.getElementById('cmTitle').textContent = atkCard.name + (st.attackQueue.fa ? ' — First Appearance—Attack' : ' — Attack');
+        document.getElementById('cmHint').textContent = 'This effect is hitting you. Defend with a card to avoid it entirely, or succumb and take the effect.';
+      }
+      // Reveal any card this choice is about (e.g. Nth Metal's peeked top card).
+      cardsEl.innerHTML = '';
+      if (st.pending && st.pending.id && C(st.pending.id)) {
+        var rc = document.createElement('div');
+        rc.className = 'cm-card';
+        rc.innerHTML = '<img src="' + img(st.pending.id) + '" alt="">';
+        cardsEl.appendChild(rc);
+      }
+      var box = document.getElementById('cmActions');
+      box.innerHTML = '';
+      acts.forEach(function (a) {
+        var b = document.createElement('button');
+        b.className = 'cm-btn'; b.type = 'button'; b.textContent = labelFor(a);
+        b.addEventListener('click', function () { doHuman(a); });
+        box.appendChild(b);
+      });
+      modal.classList.add('show'); bar.classList.remove('show');
+      return;
+    }
+
+    // Normal turn: hand tiles + Line-Up slots handle plays/buys; Action→Buying flows on its own.
+    modal.classList.remove('show');
+    if (st.turn.phase === 'action') {
+      // Opt-out button: skip straight to Buying in case a draw-heavy hand keeps
+      // refilling itself and never drains on its own.
+      btns.innerHTML = '';
+      var tb = document.createElement('button');
+      tb.className = 'abtn'; tb.type = 'button'; tb.textContent = labelFor({ kind: 'to-buying' });
+      tb.addEventListener('click', function () { doHuman({ kind: 'to-buying' }); });
+      btns.appendChild(tb);
+      bar.classList.add('show');
+      return;
+    }
+    var acts = DCENGINE.actions(st).filter(function (a) { return a.kind === 'buy-kick' || a.kind === 'defeat-sv' || a.kind === 'riddler-use' || a.kind === 'end-buying'; });
+    btns.innerHTML = '';
+    acts.forEach(function (a) {
+      var b = document.createElement('button');
+      b.className = 'abtn' + (a.kind === 'end-buying' ? ' primary' : ''); b.type = 'button'; b.textContent = labelFor(a);
+      b.addEventListener('click', function () { doHuman(a); });
+      btns.appendChild(b);
+    });
+    bar.classList.add('show');
+  }
+
+  function renderInUse(prow, cards) {
+    prow.innerHTML = '';
+    if (!cards.length) { prow.style.display = 'none'; return; }
+    cards.forEach(function (id) {
+      var d = document.createElement('div');
+      d.className = 'played-card';
+      d.innerHTML = '<img src="' + img(id) + '" alt="">';
+      prow.appendChild(d);
+    });
+    prow.style.display = 'flex';
+  }
+
+  // ---- authoritative apply + state relay (Stage C) ---------------
+  function applyAction(a) {
+    DCENGINE.doAction(st, a);
+    if (isHostPeer) broadcast();   // host relays the new state to every connected guest (no-op locally)
+  }
+  // This peer's view of the table: everyone else's cards hidden (right length, no contents).
+  function snapshotFor(peerIdx) {
+    var copy = JSON.parse(JSON.stringify(st));
+    for (var i = 0; i < copy.players.length; i++) {
+      if (i === peerIdx) continue;         // keep the receiver's own hand real
+      var n = st.players[i].hand.length;   // others: correct length, no cards
+      copy.players[i].hand = [];
+      for (var k = 0; k < n; k++) copy.players[i].hand.push('__back__');
+    }
+    return copy;
+  }
+  function broadcast() {
+    if (!isHostPeer || !room) return;
+    var players = rosterPlayers();
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i];
+      if (p.kind === 'ai' || !p.userId || p.userId === myUserId) continue; // AI + self render locally
+      stateAction.send({ st: snapshotFor(i) }, { target: p.userId }).catch(function () {});
+    }
+  }
+
+  // ---- Trystero online boot ---------------------------------------
+  function netMsg(t) { var el = document.getElementById('netStatus'); if (el) el.textContent = t || ''; }
+  function rosterPlayers() { return savedRoster ? savedRoster.players : []; }
+
+  // Build the roll from the in-room roster: humans keep their lobby picks; AI rolls distinct.
+  function buildRollFromRoster() {
+    var players = rosterPlayers();
+    var used = {};
+    for (var i = 0; i < players.length; i++) if (players[i].kind !== 'ai' && players[i].personaId) used[players[i].personaId] = true;
+    var pool = shuffleArr(PERSONAS.filter(function (id) { return !used[id]; }));
+    roll = []; var k = 0;
+    for (i = 0; i < players.length; i++) {
+      if (players[i].kind !== 'ai' && players[i].personaId) roll[i] = players[i].personaId; // human keeps lobby pick
+      else roll[i] = pool[k++];                                                          // AI (or a missing pick) rolls distinct
+    }
+  }
+
+  function presentUserIds() {
+    var out = {};
+    if (!room) return out;
+    var peers = room.getPeers();
+    for (var id in peers) { if (peers[id] && peers[id].userId) out[peers[id].userId] = true; }
+    return out;
+  }
+
+  // Host: every expected human player is connected right now?
+  function allExpectedPresent() {
+    var players = rosterPlayers();
+    if (!players.length) return false;
+    var present = presentUserIds();
+    for (var i = 0; i < players.length; i++) {
+      var p = players[i];
+      if (p.kind === 'ai' || !p.userId || p.userId === myUserId) continue; // AI + self are local
+      if (!present[p.userId]) return false;                              // a human hasn't connected yet
+    }
+    return true;
+  }
+
+  function beginOnline() {
+    if (began) return; began = true;
+    buildRollFromRoster();
+    document.getElementById('netPanel').style.display = 'none';
+    document.getElementById('personaOverlay').style.display = 'none';
+    begin(); // builds st from roll, ticks + broadcasts initial state to every connected guest
+  }
+
+  // Host: wait until all expected players are present, then start; also catch up any late joiner.
+  function hostPoll() {
+    if (!isHostPeer || !room) return;
+    if (!began && allExpectedPresent()) beginOnline();
+    if (!began) {
+      var _pl = rosterPlayers(), _pr = presentUserIds(), _need = 0, _have = 0;
+      for (var _i = 0; _i < _pl.length; _i++) { var _p = _pl[_i]; if (_p.kind !== 'ai' && _p.userId && _p.userId !== myUserId) { _need++; if (_pr[_p.userId]) _have++; } }
+      netMsg('Waiting for every player to reconnect… (' + _have + '/' + _need + ')');
+    }
+    if (began) {
+      var players = rosterPlayers(), present = presentUserIds();
+      for (var i = 0; i < players.length; i++) {
+        var p = players[i];
+        if (p.kind === 'ai' || !p.userId || p.userId === myUserId) continue;
+        // Re-send until the guest confirms it got its snapshot. A lobby->game navigation tears down and
+        // reopens that peer's connection, so an early send can be lost; this is idempotent for the guest.
+        if (present[p.userId] && !acked[p.userId]) stateAction.send({ st: snapshotFor(i) }, { target: p.userId }).catch(function () {});
+      }
+    }
+  }
+
+  var sentReady = false; // guest: tell the host once we've received our first snapshot
+  // Guest: receive the host's per-peer snapshot (everyone else's hands hidden).
+  function onState(d) {
+    if (!d || !d.st) return;
+    st = d.st;
+    document.getElementById('netPanel').style.display = 'none';
+    document.getElementById('personaOverlay').style.display = 'none';
+    render();
+    if (st.over) showResults();
+    if (!sentReady && actAction) { sentReady = true; actAction.send({ t: 'ready' }, { target: hostUserId() }).catch(function () {}); } // confirm receipt so the host stops re-sending
+  }
+
+  // Guest: send an in-game action to the authoritative host.
+  function hostUserId() { var ps = rosterPlayers(); for (var i = 0; i < ps.length; i++) if (ps[i].kind === 'you') return ps[i].userId; return null; }
+  function sendAct(a) { actAction.send({ a: a }, { target: hostUserId() }).catch(function () {}); }
+  // Re-join the room by roomId, read the roster back, then run this role's boot.
+  function bootRoom() {
+    // The roster is carried from lobby.html via sessionStorage (Trystero state dies when every holder
+    // navigates away). It is fixed after Start, so a plain copy here is all we need — no live sync.
+    try { var _sr = JSON.parse(sessionStorage.getItem('__dc_roster_' + roomId) || 'null'); if (_sr && _sr.players) savedRoster = _sr; } catch (e) {}
+    stateAction = room.makeAction('state');
+    actAction = room.makeAction('act');
+
+    onRoster(); // sync local seats from the carried roster, then confirm our seat below
+
+    if (isHostPeer) {
+      actAction.onMessage(function (d, meta) {
+        var userId = meta && meta.userId;
+        if (d && d.t === 'ready') { if (userId) acked[userId] = true; return; } // guest confirmed its snapshot
+        if (d && d.a) { applyAction(d.a); tick(); } // guest's in-game action
+      });
+      room.onError(function (err) { if (err && err.code === 'room-full') netMsg('Room is full.'); });
+    } else {
+      stateAction.onMessage(onState); // our snapshot, targeted to us by the host
+    }
+
+    room.getSelf().then(function (self) {
+      myUserId = self.userId;
+      confirmMySeat();
+      if (isHostPeer) setInterval(hostPoll, 400);
+      else netMsg('Waiting for the host to start…');
+    });
+  }
+
+  // Locate our own seat in the roster by userId match (stable per browser via IndexedDB).
+  function confirmMySeat() {
+    var players = rosterPlayers();
+    for (var i = 0; i < players.length; i++) if (players[i].userId === myUserId) { seats = syncSeatsFromRoster(); mySeats = [i]; return; }
+  }
+
+  function onRoster() {
+    var players = rosterPlayers();
+    if (!players.length) return;
+    seats = syncSeatsFromRoster(); // keep local names/kinds in step with the shared roster
+    if (myUserId) confirmMySeat();
+  }
+
+  function syncSeatsFromRoster() {
+    var players = rosterPlayers();
+    return players.map(function (p) { return { name: p.name, kind: p.kind }; });
+  }
+  // Online entry point (called from the boot dispatch). Waits for the Trystero module to load.
+  function onlineInit() {
+    if (!roomId) { netMsg('No room in this link — going back to the menu.'); setTimeout(function () { location.replace('index.html'); }, 600); return; }
+    // Show the rejoin panel up front, before the async per-tab join resolves.
+    document.getElementById('netPanel').style.display = 'flex';
+    document.getElementById('npTitle').textContent = isHostPeer ? 'Starting the game' : 'Rejoining the lobby';
+    document.getElementById('npSub').textContent = isHostPeer
+      ? 'The table starts as soon as everyone is back in the room.'
+      : 'Your seat and pick are saved in the room — just hang tight.';
+    netMsg(isHostPeer ? 'Waiting for every player to reconnect…' : 'Connecting…');
+    if (window.__DCROOM__) window.__DCROOM__.joinDCRoom(roomId).then(function (r) { room = r; bootRoom(); });
+    else window.__onDCROOMReady__ = function (m) { m.joinDCRoom(roomId).then(function (r) { room = r; bootRoom(); }); };
+  }
+
+  /* ---- the loop ------------------------------------------------- */
+  function tick() {
+    if (!st || !running) return;
+    if (!isHostPeer) return; // guests never run the engine — they render snapshots + send actions
+    // Smooth Action→Buying flow: empty hand + nothing pending means that player is done playing (no button).
+    var cur = st.players[st.turn.idx];
+    if (!st.over && isMine(st.turn.idx) && st.turn.phase === 'action' && !st.pending && !st.attackQueue && cur.hand.length === 0) {
+      if (DCENGINE.actions(st).some(function (a) { return a.kind === 'to-buying'; })) {
+        applyAction({ kind: 'to-buying' });
+        tick();
+        return;
+      }
+    }
+    render();
+    if (st.over) { showResults(); return; }
+    var owner = decisionOwner(st);
+    if (!isAiSeat(owner)) return; // a human must act — wait for input (this client or another peer)
+
+    // AI step
+    var acts = DCENGINE.actions(st);
+    if (!acts.length) return;
+    var lvl = aiLevel;
+    var act = AI.choose(st, lvl);
+    if (!act) return;
+    applyAction(act);
+    aiTimer = setTimeout(tick, AI_DELAY);
+  }
+
+  function doHuman(a) {
+    if (!st || st.over) return;
+    // Track the card whose effect prompt we're about to show so it can display
+    // the full top-effect text (SV effects now fire when you PLAY them).
+    var src = null;
+    if (a.kind === 'defeat-sv') src = a.cardId;
+    else if (a.kind === 'play' && C(a.cardId) && C(a.cardId).type === 'sv') src = a.cardId;
+    lastDefeated = src;
+    document.getElementById('choiceModal').classList.remove('show');
+    // Guest: never run the engine — send the action to the authoritative host.
+    if (!isHostPeer) { if (actAction) sendAct(a); return; }
+    applyAction(a);   // local/host: apply it, and (host) relay the new state to peers
+    tick();
+  }
+
+  /* ---- results -------------------------------------------------- */
+  function showResults() {
+    running = false;
+    clearTimeout(aiTimer);
+    var rows = document.getElementById('rsRows');
+    var scores = st.scores || {};
+    var max = -1e9; Object.keys(scores).forEach(function (k) { if (scores[k] > max) max = scores[k]; });
+    rows.innerHTML = '';
+    st.players.forEach(function (p) {
+      var r = document.createElement('div');
+      r.className = 'rs-row' + (scores[p.id] === max ? ' win' : '');
+      r.innerHTML = '<span>' + escapeHtml(p.name) + '</span><span>' + scores[p.id] + '</span>';
+      rows.appendChild(r);
+    });
+    document.getElementById('resultsOverlay').classList.add('show');
+  }
+
+  /* ================= boot ======================================= */
+  function begin() {
+    if (!roll) return;
+    var players = seats.map(function (s, i) { return { name: s.name, personaId: roll[i] }; });
+    st = DCENGINE.newGame({ seed: Math.floor(Math.random() * 1e9), players: players, refillDestroyed: !!settings.refill });
+    document.getElementById('personaOverlay').style.display = 'none';
+    running = true;
+    tick();
+    if (isHostPeer) broadcast(); // initial state to every connected guest (no-op locally)
+  }
+
+  document.getElementById('beginBtn').addEventListener('click', begin);
+  document.getElementById('endGameBtn').addEventListener('click', function () { window.location.href = 'lobby.html'; });
+  document.getElementById('rsLobby').addEventListener('click', function () { window.location.href = 'lobby.html'; });
+
+  // Peek a card by id/name (a player's Super Hero or one of their played Locations).
+  var peek = document.getElementById('peek');
+  var peekImg = document.getElementById('peekImg');
+  var peekName = document.getElementById('peekName');
+  function peekCard(id, name) {
+    if (!id) return;
+    peekImg.src = img(id);
+    peekName.textContent = name || (C(id) ? C(id).name : '');
+    peek.classList.add('show');
+  }
+  document.getElementById('peekX').addEventListener('click', function () { peek.classList.remove('show'); });
+  peek.addEventListener('click', function (ev) { if (ev.target === peek) peek.classList.remove('show'); });
+
+  // Player chips: click a name to peek their Super Hero; click a Location thumbnail to peek it.
+  document.getElementById('playerStack').addEventListener('click', function (ev) {
+    var loc = ev.target.closest ? ev.target.closest('.ploc') : null;
+    if (loc && st) { peekCard(loc.getAttribute('data-id')); return; }
+    var chip = ev.target.closest ? ev.target.closest('.chip') : null;
+    if (!chip || !st) return;
+    var i = parseInt(chip.getAttribute('data-i'), 10);
+    if (isNaN(i)) return;
+    peekCard(st.players[i].personaId, st.players[i].name);
+  });
+
+  // Line-Up buys (delegated; covers the 5 slots + any overlapping overflow cards)
+  document.addEventListener('click', function (ev) {
+    var el = ev.target.closest ? ev.target.closest('.lu-slot, .lu-extra') : null;
+    if (!el || !st || st.over) return;
+    var i = parseInt(el.getAttribute('data-i'), 10);
+    if (isNaN(i)) return;
+    var id = st.lineup[i];
+    if (!id) return;
+    if (isMine(decisionOwner(st)) && !st.pending && !st.attackQueue && st.turn.phase === 'buying' && C(id).cost <= st.turn.power) {
+      doHuman({ kind: 'buy-lineup', slot: i });
+    }
+  });
+
+    // Pile buys + SV pop-out: click a pile to buy from it; the top SV pops out like peeking your hero.
+    document.querySelector('.p-kick').addEventListener('click', function () {
+      if (!st || st.over) return;
+      var acts = DCENGINE.actions(st);
+      if (isMine(decisionOwner(st)) && !st.pending && !st.attackQueue && st.turn.phase === 'buying' && acts.some(function (a) { return a.kind === 'buy-kick'; })) doHuman({ kind: 'buy-kick' });
+    });
+    document.querySelector('.p-sv').addEventListener('click', function () {
+      if (!st || st.over) return;
+      var top = st.svStack[0];
+      if (top) peekCard(top, C(top).name); // pop out like clicking your player icon
+      var acts = DCENGINE.actions(st);
+      if (isMine(decisionOwner(st)) && !st.pending && !st.attackQueue && st.turn.phase === 'buying' && top && acts.some(function (a) { return a.kind === 'defeat-sv' && a.cardId === top; })) doHuman({ kind: 'defeat-sv', cardId: top });
+    });
+
+  if (_role === 'host' || _role === 'guest') {
+    document.getElementById('personaOverlay').style.display = 'none';
+    onlineInit(); // online mode: rejoin the Trystero room by roomId (hide the persona screen)
+  } else {
+    renderPersona(); // local / hot-seat (existing behavior)
+  }
+})();
+</script>
+</body>
+</html>
