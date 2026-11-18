@@ -303,16 +303,14 @@
 </head>
 <body>
 <script>
-/* Option A scaler: FILL the fixed 1600x900 design canvas across any viewport (stretch, no bars).
+/* Option A scaler: fit the fixed 1600x900 design canvas into any viewport (contain/letterbox).
    Everything inside <body> scales as one unit, so it looks identical on every monitor/TV. */
 (function () {
   var DW = 1600, DH = 900;
   function fit() {
-    // Fill the whole screen with zero black borders: scale X and Y independently so the design
-    // stretches to cover every pixel. On non-16:9 screens this stretches slightly (the only way
-    // to have no bars without cropping UI out of view).
-    var sx = window.innerWidth / DW, sy = window.innerHeight / DH;
-    document.body.style.transform = 'translate(-50%,-50%) scale(' + sx + ',' + sy + ')';
+    // Contain: uniform scale to fit the design inside any screen (letterbox bars on non-16:9).
+    var s = Math.min(window.innerWidth / DW, window.innerHeight / DH);
+    document.body.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
   }
   fit();
   window.addEventListener('resize', fit);
