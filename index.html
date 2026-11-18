@@ -108,34 +108,6 @@
     box-shadow: 0 0 22px rgba(255, 45, 60, 0.3);
   }
 
-  /* Local pass-and-play setup */
-  .local-setup {
-    z-index: 1;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 0.9rem;
-    align-items: center;
-    width: min(360px, 84vw);
-    padding: 1.2rem 1.3rem;
-    background: rgba(8, 11, 20, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 14px;
-    backdrop-filter: blur(3px);
-  }
-  .local-setup[hidden] { display: none; }
-  .ls-title {
-    font-size: 1.3rem;
-    font-weight: 800;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: #fff;
-  }
-  .ls-sub { margin-bottom: 0.2rem; font-size: 0.9rem; color: rgba(255,255,255,0.8); letter-spacing: 0.03em; }
-  .ls-counts { display: flex; gap: 0.6rem; justify-content: center; }
-  .ls-count { width: auto; padding: 0.7rem 1rem; font-size: 1rem; }
-  .ls-count[aria-pressed="true"] { border-color: rgba(255,45,60,0.8); box-shadow: 0 0 16px rgba(255,45,60,0.35); }
-
   .legal {
     position: absolute;
     bottom: 1.1rem;
@@ -158,24 +130,12 @@
 
   <nav class="menu" aria-label="Main menu">
     <button class="btn btn-primary" type="button" id="startBtn">Start game</button>
-    <button class="btn" type="button" id="localBtn">Local game</button>
   </nav>
 
-  <!-- Local pass-and-play setup (2-4 players sharing this device) -->
-  <section class="local-setup" id="localSetup" hidden aria-label="Local game setup">
-    <h2 class="ls-title">Local Game</h2>
-    <p class="ls-sub">Pass and play on this device. Choose how many players.</p>
-    <div class="ls-counts">
-      <button type="button" class="btn ls-count" data-n="2" aria-pressed="false">2 Players</button>
-      <button type="button" class="btn ls-count" data-n="3" aria-pressed="false">3 Players</button>
-      <button type="button" class="btn ls-count" data-n="4" aria-pressed="false">4 Players</button>
-    </div>
-    <button class="btn btn-primary" type="button" id="localPlayBtn" disabled>Play</button>
-  </section>
 
   <footer class="legal">
-    DC UNIVERSE and all related characters and elements are trademarks of and DC Comics<br />
-    Cryptozoic
+    DC UNIVERSE and all related characters and elements are trademarks of and © DC Comics.<br />
+    Cryptozoic.
   </footer>
 
 <script>
@@ -198,27 +158,6 @@
     location.href = 'lobby.html?role=host&room=' + newRoomId();
   });
 
-  // ---- Local pass-and-play (2-4 humans, one device) ---------------------
-  var localSetup = document.getElementById('localSetup');
-  var playBtn = document.getElementById('localPlayBtn');
-  var counts = Array.prototype.slice.call(localSetup.querySelectorAll('.ls-count'));
-  var chosenN = null;
-  function chooseCount(n) {
-    chosenN = n;
-    counts.forEach(function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-n') === n)); });
-    playBtn.disabled = false;
-  }
-  document.getElementById('localBtn').addEventListener('click', function () {
-    localSetup.hidden = !localSetup.hidden; // toggle the setup panel open/closed
-  });
-  counts.forEach(function (b) { b.addEventListener('click', function () { chooseCount(+b.getAttribute('data-n')); }); });
-  playBtn.addEventListener('click', function () {
-    if (!chosenN) return;
-    var players = [];
-    for (var i = 0; i < chosenN; i++) players.push({ name: 'Player ' + (i + 1), kind: 'human' });
-    try { localStorage.setItem('dc_players', JSON.stringify(players)); } catch (e) {}
-    location.href = 'game.html'; // no ?room= -> local hot-seat path reads dc_players from localStorage
-  });
 })();
 </script>
 

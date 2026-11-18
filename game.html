@@ -256,7 +256,7 @@
   .cm-btn:hover { filter:brightness(1.3); }
 
   /* Event log — bottom-right */
-  #logPanel { position:absolute; right:5%; top:87.5%; z-index:5; width:380px; max-height:99px; overflow-y:auto; /* was min(26vw,380px)/11vh — fixed for the 1600x900 design */ background:rgba(4,6,12,0.78); border:1px solid rgba(255,255,255,0.22); border-radius:10px; padding:0.5rem 0.7rem; font-size:0.85rem; line-height:1.4; color:rgba(255,255,255,0.86); }
+  #logPanel { position:absolute; right:5%; bottom:0; z-index:5; width:380px; max-height:99px; overflow-y:auto; /* was min(26vw,380px)/11vh — fixed for the 1600x900 design */ background:rgba(4,6,12,0.78); border:1px solid rgba(255,255,255,0.22); border-radius:10px; padding:0.5rem 0.7rem; font-size:0.85rem; line-height:1.4; color:rgba(255,255,255,0.86); }
   #logPanel .ll { border-bottom:1px solid rgba(255,255,255,0.06); padding:2px 0; }
   #logPanel .ll:last-child { color:#fff; font-weight:600; }
 
@@ -299,18 +299,20 @@
   .rs-btn { margin-top:1rem; width:100%; padding:0.8rem 1rem; font-family:inherit; font-size:0.95rem; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#fff; background:linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; }
   .rs-btn:hover { filter:brightness(1.25); }
 
-  .legal { position:absolute; bottom:0.6rem; left:0; right:0; z-index:1; text-align:center; padding:0 1rem; font-size:0.68rem; line-height:1.4; letter-spacing:0.03em; color:rgba(255,255,255,0.7); text-shadow:0 1px 3px rgba(0,0,0,0.9); }
 </style>
 </head>
 <body>
 <script>
-/* Option A scaler: fit the fixed 1600x900 design canvas into any viewport (contain/letterbox).
+/* Option A scaler: FILL the fixed 1600x900 design canvas across any viewport (stretch, no bars).
    Everything inside <body> scales as one unit, so it looks identical on every monitor/TV. */
 (function () {
   var DW = 1600, DH = 900;
   function fit() {
-    var s = Math.min(window.innerWidth / DW, window.innerHeight / DH);
-    document.body.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+    // Fill the whole screen with zero black borders: scale X and Y independently so the design
+    // stretches to cover every pixel. On non-16:9 screens this stretches slightly (the only way
+    // to have no bars without cropping UI out of view).
+    var sx = window.innerWidth / DW, sy = window.innerHeight / DH;
+    document.body.style.transform = 'translate(-50%,-50%) scale(' + sx + ',' + sy + ')';
   }
   fit();
   window.addEventListener('resize', fit);
@@ -343,8 +345,8 @@
     <div class="pile p-kick" style="left:89%; top:72%; width:10%; height:30.43%"><img class="topcard" id="kickTop" src="assets/cards/kick.jpg" alt=""><span class="count" id="cKick"></span></div>
 
     <div class="hand" style="left:0%; top:58.7%; width:79%; height:32.6%"><span class="lbl">Your Hand</span><div id="handCards"></div></div>
-    <div id="logPanel" aria-label="Event log"></div>
   </div>
+  <div id="logPanel" aria-label="Event log"></div>
 
   <div id="phaseBar"><div id="playedRow"></div><div id="phaseButtons"></div></div>
 
@@ -379,8 +381,6 @@
     <div id="rsRows"></div>
     <button class="rs-btn" type="button" id="rsLobby">Back to Lobby</button>
   </div></div>
-
-  <footer class="legal">DC UNIVERSE and all related characters and elements are trademarks of and DC Comics<br />Cryptozoic</footer>
 
 <script src="cards.js"></script>
 <script src="engine.js"></script>
