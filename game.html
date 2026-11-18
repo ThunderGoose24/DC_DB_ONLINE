@@ -7,11 +7,19 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  html, body { height: 100%; }
+  html { height: 100%; overflow: hidden; background: #070a12; }
 
+  /* Option A — "fit to screen": the whole UI is laid out at a fixed 1600x900 design canvas and
+     uniformly scaled (see scaler script right after <body>) so it looks identical on every
+     monitor/TV. To revert: restore this block + .table width, and delete that script. */
   body {
-    min-height: 100vh;
-    position: relative;
+    width: 1600px;
+    height: 900px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%); /* JS refines this to add scale(s) */
+    transform-origin: center center;
     overflow: hidden;
     color: #fff;
     font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
@@ -40,7 +48,7 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: min(94vw, calc(94vh * 2.1739));
+    width: 1504px; /* ~94% of the 1600px design width; height follows from aspect-ratio */
     aspect-ratio: 10 / 4.6;
   }
 
@@ -216,7 +224,7 @@
   .dstk img { position:absolute; bottom:0; width:94%; height:auto; object-fit:contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,.6)); }
 
   /* Phase action bar (To Buying / buys / End Turn) */
-  #phaseBar { position: fixed; left:16px; bottom:18px; z-index:6; display:none; flex-direction:column; align-items:flex-start; gap:6px; max-width:min(720px,52vw); }
+  #phaseBar { position: fixed; left:16px; bottom:18px; z-index:6; display:none; flex-direction:column; align-items:flex-start; gap:6px; max-width:720px; } /* was min(720px,52vw) — fixed for the 1600x900 design */
   #phaseBar.show { display:flex; }
   #playedRow { display:none; gap:3px; flex-wrap:wrap; width:max-content; pointer-events:none; }
   .played-card img { width:34px; aspect-ratio:2.5/3.5; object-fit:contain; border-radius:3px; background:#0a0f1c; border:1px solid rgba(255,210,74,.7); box-shadow:0 1px 3px rgba(0,0,0,.6); }
@@ -228,7 +236,7 @@
   /* Peek overlay — big card; click the backdrop or X to close */
   #peek { position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,.6); }
   #peek.show { display:flex; }
-  .peek-card { aspect-ratio:2.5/3.5; width:min(46vh,42vw); position:relative; margin:0; }
+  .peek-card { aspect-ratio:2.5/3.5; width:414px; position:relative; margin:0; } /* was min(46vh,42vw) — fixed for the 1600x900 design */
   .peek-card img { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 6px 24px rgba(0,0,0,.8)); pointer-events:none; }
   .peek-card figcaption { position:absolute; left:50%; bottom:-1.7rem; transform:translateX(-50%); font-size:1.1rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#fff; white-space:nowrap; }
   .peek-x { position:absolute; top:14px; right:20px; z-index:21; width:34px; height:34px; border-radius:50%; font-size:1.4rem; line-height:1; color:#fff; background:rgba(4,6,12,.7); border:1px solid rgba(255,255,255,.3); cursor:pointer; }
@@ -236,7 +244,7 @@
   /* Choice modal (defense / pending) */
   #choiceModal { position:fixed; inset:0; z-index:8; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.55); }
   #choiceModal.show { display:flex; }
-  .cm-panel { width:min(460px,90vw); max-height:82vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:14px; padding:1.3rem; box-shadow:0 18px 60px rgba(0,0,0,0.6); }
+  .cm-panel { width:460px; max-height:738px; overflow-y:auto; /* was min(460px,90vw)/82vh — fixed for the 1600x900 design */ background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:14px; padding:1.3rem; box-shadow:0 18px 60px rgba(0,0,0,0.6); }
   .cm-title { font-size:1.05rem; font-weight:900; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.4rem; color:#fff; }
   .cm-hint { font-size:0.82rem; line-height:1.5; color:rgba(255,255,255,0.7); margin-bottom:0.6rem; white-space:pre-line; }
   .cm-cards { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 0 0.9rem; }
@@ -248,14 +256,14 @@
   .cm-btn:hover { filter:brightness(1.3); }
 
   /* Event log — bottom-right */
-  #logPanel { position:absolute; right:5%; top:87.5%; z-index:5; width:min(26vw,380px); max-height:11vh; overflow-y:auto; background:rgba(4,6,12,0.78); border:1px solid rgba(255,255,255,0.22); border-radius:10px; padding:0.5rem 0.7rem; font-size:0.85rem; line-height:1.4; color:rgba(255,255,255,0.86); }
+  #logPanel { position:absolute; right:5%; top:87.5%; z-index:5; width:380px; max-height:99px; overflow-y:auto; /* was min(26vw,380px)/11vh — fixed for the 1600x900 design */ background:rgba(4,6,12,0.78); border:1px solid rgba(255,255,255,0.22); border-radius:10px; padding:0.5rem 0.7rem; font-size:0.85rem; line-height:1.4; color:rgba(255,255,255,0.86); }
   #logPanel .ll { border-bottom:1px solid rgba(255,255,255,0.06); padding:2px 0; }
   #logPanel .ll:last-child { color:#fff; font-weight:600; }
 
   /* Persona pre-game overlay */
   #personaOverlay { position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; background:rgba(3,5,10,0.82); }
   #netPanel { position:fixed; inset:0; z-index:21; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.86); }
-  .np-panel { width:min(640px,92vw); max-height:90vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); }
+  .np-panel { width:640px; max-height:810px; overflow-y:auto; /* was min(640px,92vw)/90vh — fixed for the 1600x900 design */ background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); }
   .np-title { font-size:1.4rem; font-weight:900; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.3rem; }
   .np-sub { font-size:0.85rem; color:rgba(255,255,255,0.6); margin-bottom:1.1rem; line-height:1.5; }
   .np-step { font-weight:700; letter-spacing:0.06em; text-transform:uppercase; font-size:0.8rem; color:#ff2d3c; margin:0.9rem 0 0.3rem; }
@@ -268,7 +276,7 @@
   .np-peer { margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid rgba(255,255,255,0.12); }
   .np-peer:last-child { border-bottom:none; margin-bottom:0; }
   .np-peer .np-step { color:#fff; font-size:0.9rem; letter-spacing:0.04em; text-transform:none; }
-  .po-panel { width:min(640px,92vw); max-height:90vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); }
+  .po-panel { width:640px; max-height:810px; overflow-y:auto; /* was min(640px,92vw)/90vh — fixed for the 1600x900 design */ background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); }
   .po-title { font-size:1.4rem; font-weight:900; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:0.3rem; }
   .po-sub { font-size:0.85rem; color:rgba(255,255,255,0.6); margin-bottom:1.1rem; line-height:1.5; }
   .po-status { font-size:0.8rem; color:#43d675; margin-bottom:1.1rem; min-height:1em; line-height:1.5; letter-spacing:0.02em; }
@@ -284,7 +292,7 @@
   /* Results overlay */
   #resultsOverlay { position:fixed; inset:0; z-index:15; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.8); }
   #resultsOverlay.show { display:flex; }
-  .rs-panel { width:min(420px,90vw); background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); text-align:center; }
+  .rs-panel { width:420px; /* was min(420px,90vw) — fixed for the 1600x900 design */ background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); text-align:center; }
   .rs-title { font-size:1.3rem; font-weight:900; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:1rem; color:#fff; }
   .rs-row { display:flex; justify-content:space-between; gap:1rem; padding:0.5rem 0.7rem; border-radius:8px; background:rgba(255,255,255,0.06); margin-bottom:0.5rem; font-weight:700; letter-spacing:0.04em; }
   .rs-row.win { outline:2px solid #ffd24a; }
@@ -295,6 +303,19 @@
 </style>
 </head>
 <body>
+<script>
+/* Option A scaler: fit the fixed 1600x900 design canvas into any viewport (contain/letterbox).
+   Everything inside <body> scales as one unit, so it looks identical on every monitor/TV. */
+(function () {
+  var DW = 1600, DH = 900;
+  function fit() {
+    var s = Math.min(window.innerWidth / DW, window.innerHeight / DH);
+    document.body.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+</script>
 
   <div class="players" aria-label="Players">
     <span class="players-label">Players</span>
