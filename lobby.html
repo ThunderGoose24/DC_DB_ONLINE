@@ -74,6 +74,11 @@
   }
   .copybtn:hover { filter: brightness(1.35); }
 
+  .namebox { z-index: 1; position: relative; display: flex; gap: 0.5rem; align-items: center; width: min(420px, 86vw); margin-bottom: 1.3rem; }
+  .namebox label { flex: none; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.7); white-space: nowrap; }
+  .namebox input { flex: 1; padding: 0.6rem 0.9rem; font-family: inherit; font-size: 0.85rem; letter-spacing: 0.02em; color: #fff; background: rgba(4,6,12,0.6); border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; }
+  .namebox input::placeholder { color: rgba(255,255,255,0.4); }
+
   .slots { z-index: 1; position: relative; display: flex; flex-direction: column; gap: 0.7rem; width: min(420px, 86vw); margin-bottom: 1.2rem; }
   .slot {
     display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.8rem 1rem; border-radius: 10px;
@@ -151,6 +156,11 @@
   <div class="linkbox">
     <input type="text" readonly id="linkIn" aria-label="Invite link" />
     <button class="copybtn" type="button" id="copyBtn">Copy link</button>
+  </div>
+
+  <div class="namebox">
+    <label for="nameIn">Your display name</label>
+    <input type="text" id="nameIn" maxlength="20" placeholder="Type your name…" autocomplete="off" />
   </div>
 
   <div class="slots" id="slots" aria-label="Players"></div>
@@ -355,6 +365,19 @@
       });
     }
 
+    // Editable display name — each human edits their OWN roster entry, keyed by userId.
+    // Atomic functional set so a first guest can't clobber the host's seed (or vice-versa).
+    var nameIn = document.getElementById('nameIn');
+    nameIn.addEventListener('input', function () {
+      if (!myUserId) return; // ignore keystrokes until this tab's identity is known
+      var v = nameIn.value.trim();
+      rosterState.set(function (cur) {
+        var players = (cur && cur.players) ? cur.players.slice() : [];
+        for (var i = 0; i < players.length; i++) if (players[i].userId === myUserId) { players[i].name = v; break; }
+        return { players: players };
+      });
+    });
+
     room.getSelf().then(function (self) {
       myUserId = self.userId;
       if (isHost) {
@@ -372,7 +395,7 @@
       var iv = setInterval(function () {
         var players = (rosterState.get() || { players: [] }).players;
         for (var i = 0; i < players.length; i++) if (players[i].userId === myUserId) { mySeat = i; break; }
-        if (mySeat >= 0) { clearInterval(iv); renderSeats(players); refreshPicker(); }
+        if (mySeat >= 0) { clearInterval(iv); renderSeats(players); refreshPicker(); if (!nameIn.value) nameIn.value = players[mySeat].name; }
       }, 250);
       pickTitle.textContent = 'Pick your Super Hero as ' + (isHost ? 'You' : 'Player') + '.';
     });
