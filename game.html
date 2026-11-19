@@ -239,8 +239,11 @@
   .cm-card { position:relative; width:76px; aspect-ratio:2.5/3.5; border-radius:6px; overflow:hidden; background:#0a0f1c; border:1px solid rgba(150,195,255,.4); }
   .cm-card img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
   .cm-actions { display:flex; flex-direction:column; gap:0.6rem; }
-  .cm-btn { font-family:inherit; font-size:0.9rem; font-weight:700; letter-spacing:0.04em; text-align:left; color:#fff; padding:0.65rem 0.9rem; border-radius:8px; cursor:pointer; background:rgba(42,51,72,0.9); border:1px solid rgba(255,255,255,0.28); transition:filter .15s ease; }
+  .cm-btn { font-family:inherit; font-size:0.9rem; font-weight:700; letter-spacing:0.04em; text-align:left; color:#fff; padding:0.65rem 0.9rem; border-radius:8px; cursor:pointer; background:rgba(42,51,72,0.9); border:1px solid rgba(255,255,255,0.28); transition:filter .15s ease; display:flex; align-items:center; gap:0.6rem; }
   .cm-btn:hover { filter:brightness(1.3); }
+  /* Small clickable card art on option rows (pick/destroy/take/defend) — click for full size */
+  .cm-thumb { height:56px; aspect-ratio:2.5/3.5; width:auto; object-fit:contain; border-radius:4px; background:#0a0f1c; border:1px solid rgba(150,195,255,.4); cursor:pointer; flex:none; }
+  .cm-thumb:hover { filter:brightness(1.35); }
 
   /* Event log — bottom-right */
   #logPanel { position:absolute; right:16px; bottom:0; z-index:5; width:380px; height:99px; overflow-y:auto; /* right edge flush with the public stacks (x=1584) */ /* was min(26vw,380px)/11vh — fixed for the 1600x900 design */ background:rgba(4,6,12,0.78); border:1px solid rgba(255,255,255,0.22); border-radius:10px; padding:0.5rem 0.7rem; font-size:0.85rem; line-height:1.4; color:rgba(255,255,255,0.86); }
@@ -746,7 +749,18 @@
       box.innerHTML = '';
       acts.forEach(function (a) {
         var b = document.createElement('button');
-        b.className = 'cm-btn'; b.type = 'button'; b.textContent = labelFor(a);
+        b.className = 'cm-btn'; b.type = 'button';
+        // Card options (pick / destroy / take, and defend) get small clickable art — full size on click.
+        var cid = a.id || a.cardId;
+        if (cid && C(cid)) {
+          var t = document.createElement('img');
+          t.className = 'cm-thumb'; t.src = img(cid); t.alt = '';
+          t.addEventListener('click', function (ev) { ev.stopPropagation(); peekCard(cid); }); // manual peek: stays until clicked off
+          b.appendChild(t);
+        }
+        var lbl = document.createElement('span');
+        lbl.textContent = labelFor(a);
+        b.appendChild(lbl);
         b.addEventListener('click', function () { doHuman(a); });
         box.appendChild(b);
       });
