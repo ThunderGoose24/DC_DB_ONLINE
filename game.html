@@ -63,13 +63,6 @@
     gap: 8px;
   }
 
-  .players-label {
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.6);
-  }
 
   .chip {
     position: relative;
@@ -105,8 +98,8 @@
 
   .turn-now {
     position: fixed;
-    top: 18px;
-    right: 24px;
+    top: 0;
+    right: 16px; /* flush with the right edge of the public stacks (x=1584) */
     z-index: 5;
     padding: 0.4rem 1rem;
     border-radius: 8px;
@@ -177,11 +170,7 @@
   .lu-extra:hover { transform: scale(1.16); z-index:40; }
 
 
-  .lu-label {
-    position: absolute; left: 36%; top: 21.4%; transform: translateX(-50%);
-    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase;
-    color: rgba(255,255,255,0.8); padding: 0.18rem 0.8rem; border-radius: 999px; background: rgba(4,6,12,0.55);
-  }
+
 
   /* Right column — public stacks */
   .pile {
@@ -256,7 +245,7 @@
   .cm-btn:hover { filter:brightness(1.3); }
 
   /* Event log — bottom-right */
-  #logPanel { position:absolute; right:5%; bottom:0; z-index:5; width:380px; max-height:99px; overflow-y:auto; /* was min(26vw,380px)/11vh — fixed for the 1600x900 design */ background:rgba(4,6,12,0.78); border:1px solid rgba(255,255,255,0.22); border-radius:10px; padding:0.5rem 0.7rem; font-size:0.85rem; line-height:1.4; color:rgba(255,255,255,0.86); }
+  #logPanel { position:absolute; right:16px; bottom:0; z-index:5; width:380px; height:99px; overflow-y:auto; /* right edge flush with the public stacks (x=1584) */ /* was min(26vw,380px)/11vh — fixed for the 1600x900 design */ background:rgba(4,6,12,0.78); border:1px solid rgba(255,255,255,0.22); border-radius:10px; padding:0.5rem 0.7rem; font-size:0.85rem; line-height:1.4; color:rgba(255,255,255,0.86); }
   #logPanel .ll { border-bottom:1px solid rgba(255,255,255,0.06); padding:2px 0; }
   #logPanel .ll:last-child { color:#fff; font-weight:600; }
 
@@ -318,7 +307,6 @@
 </script>
 
   <div class="players" aria-label="Players">
-    <span class="players-label">Players</span>
     <div id="playerStack"></div>
     <div class="you-persona" id="youPersona" aria-hidden="true"></div>
   </div>
@@ -328,7 +316,6 @@
   <span class="turn-now" id="turnNow"></span>
 
   <div class="table">
-    <div class="lu-label">Line Up</div>
     <div class="slot destroyed" style="left:0%;     top:25%; width:10%; height:30.43%"><span class="lbl">Destroyed</span><div class="dstk" id="destroyedStack"></div><span class="count" id="cDestroyed"></span></div>
     <div class="slot"           style="left:11.5%;  top:25%; width:10%; height:30.43%"><img class="deckback" id="deckBack" src="assets/cards/cardback.jpg" alt=""><span class="lbl">Main Deck</span><span class="count" id="cMainDeck"></span></div>
     <div class="lu-slot" data-i="0" style="left:23%;   top:25%; width:10%; height:30.43%"></div>
@@ -338,12 +325,16 @@
     <div class="lu-slot" data-i="4" style="left:69%;   top:25%; width:10%; height:30.43%"></div>
     <div class="lu-extras" id="luExtras"></div>
 
-    <div class="pile" style="left:89%; top:8%; width:10%; height:30.43%"><img class="topcard" id="weakTop" src="assets/cards/weakness.jpg" alt=""><span class="count" id="cWeak"></span></div>
-    <div class="pile p-sv" style="left:89%; top:40%; width:10%; height:30.43%"><img class="topcard" id="svTop" alt=""><span class="count" id="cSv"></span></div>
-    <div class="pile p-kick" style="left:89%; top:72%; width:10%; height:30.43%"><img class="topcard" id="kickTop" src="assets/cards/kick.jpg" alt=""><span class="count" id="cKick"></span></div>
 
     <div class="hand" style="left:0%; top:58.7%; width:79%; height:32.6%"><span class="lbl">Your Hand</span><div id="handCards"></div></div>
   </div>
+
+  <!-- Public stacks pinned to the screen's right edge (moved out of .table).
+       .pile uses translate(-50%,-50%), so left/top are the CENTER; these centers keep each
+       pile at its original vertical position while shifting it flush against the right edge. -->
+  <div class="pile" style="left:1509px; top:229px; width:150px; height:210px"><img class="topcard" id="weakTop" src="assets/cards/weakness.jpg" alt=""><span class="count" id="cWeak"></span></div>
+  <div class="pile p-sv" style="left:1509px; top:450px; width:150px; height:210px"><img class="topcard" id="svTop" alt=""><span class="count" id="cSv"></span></div>
+  <div class="pile p-kick" style="left:1509px; top:671px; width:150px; height:210px"><img class="topcard" id="kickTop" src="assets/cards/kick.jpg" alt=""><span class="count" id="cKick"></span></div>
   <div id="logPanel" aria-label="Event log"></div>
 
   <div id="phaseBar"><div id="playedRow"></div><div id="phaseButtons"></div></div>
@@ -573,9 +564,9 @@
 
     // Pile buys: highlight + enable clicking when affordable on your Buying turn
     var acts = buyingYou ? DCENGINE.actions(st) : [];
+    // Kick is bought by clicking the pile, so it keeps its "affordable" glow. The SV no longer buys on
+    // click (it only pops out to peek), so it gets no buy-glow — defeating it goes through the Defeat button.
     document.querySelector('.p-kick').classList.toggle('can-buy', !!acts.some(function (a) { return a.kind === 'buy-kick'; }));
-    var topSv2 = st.svStack[0];
-    document.querySelector('.p-sv').classList.toggle('can-buy', !!topSv2 && acts.some(function (a) { return a.kind === 'defeat-sv' && a.cardId === topSv2; }));
 
     // Line-Up overflow cards (index >= 5): shown overlapping past the last slot
     var luEx = document.getElementById('luExtras');
@@ -626,9 +617,9 @@
     }
     layoutHand(); // keep full size; overlap when there are many (see above)
 
-    // event log (newest last; keep it short — full history still scrolls up)
+    // event log (endless scroll: render the whole history, newest last; #logPanel is fixed-size so it scrolls)
     var lp = document.getElementById('logPanel');
-    var tail = st.log.slice(-9);
+    var tail = st.log;
     lp.innerHTML = tail.map(function (l) { return '<div class="ll">' + escapeHtml(l) + '</div>'; }).join('');
     lp.scrollTop = lp.scrollHeight;
 
@@ -768,7 +759,8 @@
       bar.classList.add('show');
       return;
     }
-    var acts = DCENGINE.actions(st).filter(function (a) { return a.kind === 'buy-kick' || a.kind === 'defeat-sv' || a.kind === 'riddler-use' || a.kind === 'end-buying'; });
+    // No "Buy Kick" button — the kick pile is bought by clicking it. Defeating an SV goes through its button here.
+    var acts = DCENGINE.actions(st).filter(function (a) { return a.kind === 'defeat-sv' || a.kind === 'riddler-use' || a.kind === 'end-buying'; });
     btns.innerHTML = '';
     acts.forEach(function (a) {
       var b = document.createElement('button');
@@ -1080,9 +1072,7 @@
     document.querySelector('.p-sv').addEventListener('click', function () {
       if (!st || st.over) return;
       var top = st.svStack[0];
-      if (top) peekCard(top, C(top).name); // pop out like clicking your player icon
-      var acts = DCENGINE.actions(st);
-      if (isMine(decisionOwner(st)) && !st.pending && !st.attackQueue && st.turn.phase === 'buying' && top && acts.some(function (a) { return a.kind === 'defeat-sv' && a.cardId === top; })) doHuman({ kind: 'defeat-sv', cardId: top });
+      if (top) peekCard(top, C(top).name); // pop out like clicking your player icon (no longer buys on click — use the Defeat button)
     });
 
   if (_role === 'host' || _role === 'guest') {
