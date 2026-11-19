@@ -148,6 +148,10 @@
     'super-speed': function (st, p) { E.cardDraw(st, p, 1); },
 
     'power-ring': function (st, p) { // reveal top of your deck; it stays on top (not discarded)
+      if (!p.deck.length && p.discards.length) { // no deck left: reshuffle discards into a new one first
+        p.deck = E.shuffleInPlace(st, p.discards.splice(0));
+        log(st, p.name + ' shuffles their Discards into a new Deck.');
+      }
       if (!p.deck.length) return;
       var top = p.deck[p.deck.length - 1];
       log(st, C(top).name + " is revealed from the top of " + p.name + "'s deck.");
@@ -263,12 +267,9 @@
       E.setPending(st, pend);
     },
 
-    'two-face': function (st, p) { // even/odd vs top of deck
+    'two-face': function (st, p) { // even/odd vs top of deck — blind choice first, then reveal
       if (!p.deck.length) return;
-      var top = p.deck[p.deck.length - 1]; // revealed (not popped yet — resolvePending pops it)
-      log(st, C(top).name + " is revealed from the top of " + p.name + "'s deck.");
-      E.pushReveal(st, top); // pop out so you can read it; also shown in the choice modal via pend.id
-      E.setPending(st, { kind: 'tf', id: top, actions: [{ k: 'even' }, { k: 'odd' }] });
+      E.setPending(st, { kind: 'tf', actions: [{ k: 'even' }, { k: 'odd' }] });
     },
 
     'clayface': function (st, p) { // choose a card you played this turn; play again
@@ -319,7 +320,12 @@
       if (st.turn._xrayActive) return; // already resolving an X-Ray Vision cross-play — don't recurse
       var opts = [];
       st.players.forEach(function (o) {
-        if (o.id === p.id || !o.deck.length) return;
+        if (o.id === p.id) return;
+        if (!o.deck.length && o.discards.length) { // empty deck: reshuffle so the foe still has a top to reveal
+          o.deck = E.shuffleInPlace(st, o.discards.splice(0));
+          log(st, o.name + ' shuffles their Discards into a new Deck.');
+        }
+        if (!o.deck.length) return; // no deck and nothing to shuffle in: no top to reveal
         var top = o.deck[o.deck.length - 1];
         log(st, C(top).name + " is revealed from " + o.name + "'s deck.");
         if (typeOf(top) !== 'location') opts.push({ owner: o.id, id: top });
@@ -671,9 +677,11 @@
         break;
       }
 
-      case 'tf': { // Two-Face: even/odd vs top of deck (0 is even)
+      case 'tf': { // Two-Face: blind choice was made; now reveal top, then apply by parity (0 is even)
           var top = p.deck.pop();
           if (top == null) break; // deck emptied before this resolved; nothing to peek
+          log(st, C(top).name + " is revealed from the top of " + p.name + "'s deck.");
+          E.pushReveal(st, top); // pop out so you can read it after the blind choice
           var match = (a.k === 'even') ? (C(top).cost % 2 === 0) : (C(top).cost % 2 === 1);
           if (match) { p.hand.push(top); log(st, C(top).name + " is drawn to the hand."); }
           else { p.discards.push(top); log(st, C(top).name + " is discarded."); }
