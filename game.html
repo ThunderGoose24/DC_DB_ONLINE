@@ -316,25 +316,25 @@
   <span class="turn-now" id="turnNow"></span>
 
   <div class="table">
-    <div class="slot destroyed" style="left:0%;     top:25%; width:10%; height:30.43%"><span class="lbl">Destroyed</span><div class="dstk" id="destroyedStack"></div><span class="count" id="cDestroyed"></span></div>
-    <div class="slot"           style="left:11.5%;  top:25%; width:10%; height:30.43%"><img class="deckback" id="deckBack" src="assets/cards/cardback.jpg" alt=""><span class="lbl">Main Deck</span><span class="count" id="cMainDeck"></span></div>
-    <div class="lu-slot" data-i="0" style="left:23%;   top:25%; width:10%; height:30.43%"></div>
-    <div class="lu-slot" data-i="1" style="left:34.5%; top:25%; width:10%; height:30.43%"></div>
-    <div class="lu-slot" data-i="2" style="left:46%;   top:25%; width:10%; height:30.43%"></div>
-    <div class="lu-slot" data-i="3" style="left:57.5%; top:25%; width:10%; height:30.43%"></div>
-    <div class="lu-slot" data-i="4" style="left:69%;   top:25%; width:10%; height:30.43%"></div>
+    <div class="slot destroyed" style="left:10.64%; top:26.58%; width:10%; height:30.43%"><span class="lbl">Destroyed</span><div class="dstk" id="destroyedStack"></div><span class="count" id="cDestroyed"></span></div>
+    <div class="slot"           style="left:22.14%; top:26.58%; width:10%; height:30.43%"><img class="deckback" id="deckBack" src="assets/cards/cardback.jpg" alt=""><span class="lbl">Main Deck</span><span class="count" id="cMainDeck"></span></div>
+    <div class="lu-slot" data-i="0" style="left:33.64%; top:26.58%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="1" style="left:45.14%; top:26.58%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="2" style="left:56.64%; top:26.58%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="3" style="left:68.14%; top:26.58%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="4" style="left:79.64%; top:26.58%; width:10%; height:30.43%"></div>
     <div class="lu-extras" id="luExtras"></div>
 
 
-    <div class="hand" style="left:0%; top:58.7%; width:79%; height:32.6%"><span class="lbl">Your Hand</span><div id="handCards"></div></div>
+    <div class="hand" style="left:10.64%; top:60.29%; width:79%; height:32.6%"><span class="lbl">Your Hand</span><div id="handCards"></div></div>
   </div>
 
   <!-- Public stacks pinned to the screen's right edge (moved out of .table).
        .pile uses translate(-50%,-50%), so left/top are the CENTER; these centers keep each
        pile at its original vertical position while shifting it flush against the right edge. -->
-  <div class="pile" style="left:1509px; top:229px; width:150px; height:210px"><img class="topcard" id="weakTop" src="assets/cards/weakness.jpg" alt=""><span class="count" id="cWeak"></span></div>
-  <div class="pile p-sv" style="left:1509px; top:450px; width:150px; height:210px"><img class="topcard" id="svTop" alt=""><span class="count" id="cSv"></span></div>
-  <div class="pile p-kick" style="left:1509px; top:671px; width:150px; height:210px"><img class="topcard" id="kickTop" src="assets/cards/kick.jpg" alt=""><span class="count" id="cKick"></span></div>
+  <div class="pile" style="left:1509px; top:172px; width:150px; height:210px"><img class="topcard" id="weakTop" src="assets/cards/weakness.jpg" alt=""><span class="count" id="cWeak"></span></div>
+  <div class="pile p-sv" style="left:1509px; top:393px; width:150px; height:210px"><img class="topcard" id="svTop" alt=""><span class="count" id="cSv"></span></div>
+  <div class="pile p-kick" style="left:1509px; top:614px; width:150px; height:210px"><img class="topcard" id="kickTop" src="assets/cards/kick.jpg" alt=""><span class="count" id="cKick"></span></div>
   <div id="logPanel" aria-label="Event log"></div>
 
   <div id="phaseBar"><div id="playedRow"></div><div id="phaseButtons"></div></div>
@@ -571,7 +571,7 @@
     // Line-Up overflow cards (index >= 5): shown overlapping past the last slot
     var luEx = document.getElementById('luExtras');
     luEx.innerHTML = '';
-    var luSlotLefts = [23, 34.5, 46, 57.5, 69]; // left edge of each base slot (matches the .lu-slot markup)
+    var luSlotLefts = [33.64, 45.14, 56.64, 68.14, 79.64]; // left edge of each base slot (matches the .lu-slot markup)
     for (var ei = 5; ei < st.lineup.length; ei++) {
       var eid = st.lineup[ei];
       if (!eid) continue;
@@ -582,7 +582,7 @@
       ed.setAttribute('data-i', ei);
       // Directly behind its own slot, left to right down the line-up; small up-offset so it peeks out and stays readable.
       ed.style.left = luSlotLefts[col] + '%';
-      ed.style.top = (18 - row * 6) + '%';
+      ed.style.top = (19.58 - row * 6) + '%'; // base moved down with the line-up so extras stay behind their slot
       ed.innerHTML = '<img src="' + img(eid) + '" alt="">';
       luEx.appendChild(ed);
     }
