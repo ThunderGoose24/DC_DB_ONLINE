@@ -480,8 +480,9 @@
     if (s.pending) {
       // The Joker: each FOE makes their own choice. Aquaman's Trident: the player who played it,
       // even though st.turn has already advanced past them at end of turn.
-      if (s.pending.kind === 'trident') return s.players[s.pending.owner];
-      if (s.pending.kind === 'jkm') return s.players[s.pending.foes[s.pending.idx]];
+      // (Return seat INDICES like every other branch — isMine/isAiSeat index into mySeats/seats.)
+      if (s.pending.kind === 'trident') return s.pending.owner;
+      if (s.pending.kind === 'jkm') return s.pending.foes[s.pending.idx];
       return (s.attackQueue && s.attackQueue.awaiting) ? s.attackQueue.targets[0] : s.turn.idx;
     }
     if (s.attackQueue) return s.attackQueue.targets[0];
