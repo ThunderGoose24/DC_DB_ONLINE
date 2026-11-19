@@ -62,9 +62,7 @@
     // this turn into your hand" — per-card yes/no at gain time.
     if (t.playedIds.indexOf('dark-knight') >= 0 && t.playedIds.indexOf('catwoman') >= 0)
       return { kind: 'hand', id: id, actions: [{ k: 'yes' }, { k: 'no' }] };
-    // Aquaman's Trident (played this turn): any bought/gained card.
-    if (t.playedIds.indexOf('aquamans-trident') >= 0)
-      return { kind: 'top', id: id, actions: [{ k: 'yes' }, { k: 'no' }] };
+    // Aquaman's Trident is now an END-OF-TURN effect (see endOfTurn), not a per-card reroute.
     // Aquaman persona: cost <=5 only; disabled while face down.
     if (!p.faceDown && p.personaId === 'aquaman-mc' && C(id).cost <= 5)
       return { kind: 'top', id: id, actions: [{ k: 'yes' }, { k: 'no' }] };
@@ -125,6 +123,17 @@
     });
   }
 
+  /* ================= end-of-turn effects ======================== */
+  function endOfTurn(st, p) {
+    // Aquaman's Trident: "You may put any one card you buy or gain this turn on top of your deck."
+    if (st.turn.playedIds.indexOf('aquamans-trident') < 0) return;
+    var cands = st.turn.boughtGainedThisTurn.slice();
+    if (!cands.length) return; // nothing bought/gained this turn: no choice
+    var acts = [{ k: 'skip' }];
+    cands.forEach(function (id, i) { acts.push({ k: 'pick', n: i, id: id }); });
+    E.setPending(st, { kind: 'trident', owner: p.id, list: cands, actions: acts });
+  }
+
   /* ================= onPlay (Action phase, from hand) ========== */
   var onPlay = {
     'batmobile': function (st, p) { // first card this turn: no +1; draw five
@@ -137,6 +146,13 @@
     'kid-flash': function (st, p) { E.cardDraw(st, p, 1); },
     'the-fastest-man-alive': function (st, p) { E.cardDraw(st, p, 2); },
     'super-speed': function (st, p) { E.cardDraw(st, p, 1); },
+
+    'power-ring': function (st, p) { // reveal top of your deck; it stays on top (not discarded)
+      if (!p.deck.length) return;
+      var top = p.deck[p.deck.length - 1];
+      log(st, C(top).name + " is revealed from the top of " + p.name + "'s deck.");
+      E.pushReveal(st, top);
+    },
 
     'man-of-steel': function (st, p) { // all Super Powers from discards -> hand
       for (var n = 0; n < p.discards.length; n++) {
@@ -196,9 +212,10 @@
     },
 
     'lobo': function (st, p) { // may destroy up to two in hand/discards
-      if (!p.hand.length && !p.discards.length) return;
-      var pend = { kind: 'lobo', picked: [], max: 2, optional: true };
-      pend.actions = pickActs(pend, p.hand.concat(p.discards));
+      var cands = p.hand.concat(p.discards);
+      if (!cands.length) return;
+      var pend = { kind: 'lobo', picked: [], max: 2, optional: true, pool: cands.slice() };
+      pend.actions = pickActs(pend, pend.pool); // options stay stable (snapshot); duplicates re-pickable
       E.setPending(st, pend);
     },
 
@@ -241,14 +258,17 @@
 
     'zatanna-zatara': function (st, p) { // up to two from discards -> bottom of deck
       if (!p.discards.length) return;
-      var pend = { kind: 'zz', picked: [], max: 2, optional: true };
-      pend.actions = pickActs(pend, p.discards);
+      var pend = { kind: 'zz', picked: [], max: 2, optional: true, pool: p.discards.slice() };
+      pend.actions = pickActs(pend, pend.pool); // options stay stable (snapshot); duplicates re-pickable
       E.setPending(st, pend);
     },
 
     'two-face': function (st, p) { // even/odd vs top of deck
       if (!p.deck.length) return;
-      E.setPending(st, { kind: 'tf', actions: [{ k: 'even' }, { k: 'odd' }] });
+      var top = p.deck[p.deck.length - 1]; // revealed (not popped yet — resolvePending pops it)
+      log(st, C(top).name + " is revealed from the top of " + p.name + "'s deck.");
+      E.pushReveal(st, top); // pop out so you can read it; also shown in the choice modal via pend.id
+      E.setPending(st, { kind: 'tf', id: top, actions: [{ k: 'even' }, { k: 'odd' }] });
     },
 
     'clayface': function (st, p) { // choose a card you played this turn; play again
@@ -277,10 +297,12 @@
     'scarecrow': function (st, p) { E.fireAttack(st, p.id, 'scarecrow', false); },
     'starro': function (st, p) { E.fireAttack(st, p.id, 'starro', false); },
 
-    'the-penguin': function (st, p) { // draw two, then choose and discard two
+    'the-penguin': function (st, p) { // draw two, then choose and discard exactly two
       E.cardDraw(st, p, 2);
-      var pend = { kind: 'penguin', picked: [], max: 2 };
-      pend.actions = pickActs(pend, p.hand);
+      var pool = p.hand.slice();
+      if (!pool.length) return; // nothing left to discard
+      var pend = { kind: 'penguin', picked: [], max: Math.min(2, pool.length), pool: pool };
+      pend.actions = mustPickActs(pend, pend.pool); // exactly two; options stay stable (snapshot)
       E.setPending(st, pend);
     },
 
@@ -294,6 +316,7 @@
     },
 
     'xray-vision': function (st, p) { // foes reveal deck tops; play one cross
+      if (st.turn._xrayActive) return; // already resolving an X-Ray Vision cross-play — don't recurse
       var opts = [];
       st.players.forEach(function (o) {
         if (o.id === p.id || !o.deck.length) return;
@@ -301,7 +324,8 @@
         log(st, C(top).name + " is revealed from " + o.name + "'s deck.");
         if (typeOf(top) !== 'location') opts.push({ owner: o.id, id: top });
       });
-      if (!opts.length) return;
+      if (!opts.length) return; // nothing eligible to play: effect doesn't happen
+      st.turn._xrayActive = true; // set only when a choice is actually opened
       var acts = [];
       opts.forEach(function (o, i) { acts.push({ k: 'pick', n: i, owner: o.owner, id: o.id }); });
       E.setPending(st, { kind: 'xray', actions: acts });
@@ -355,6 +379,7 @@
       var top = p.deck.pop();
       p.discards.push(top);
       log(st, C(top).name + " is discarded from the top of " + p.name + "'s deck.");
+      E.pushReveal(st, top); // pop out what was revealed (stays in LOG too)
       if (C(top).cost >= 1) E.gainWeakness(st, p, 1);
     },
     'scarecrow': function (st, p) { E.gainWeakness(st, p, 1); },
@@ -363,6 +388,7 @@
       var top = p.deck.pop();
       p.discards.push(top);
       log(st, C(top).name + " is discarded from the top of " + p.name + "'s deck.");
+      E.pushReveal(st, top); // pop out each revealed card so you see what got played this turn
       if (typeOf(top) !== 'location') q.collected.push({ owner: p.id, id: top });
     }
   };
@@ -388,8 +414,8 @@
     'brainiac': function (st, p, q) { // choose two -> shared face-down pool
       if (!p.hand.length) return;
       var max = Math.min(2, p.hand.length);
-      var pend = { kind: 'bifa', picked: [], max: max, owner: p.id };
-      pend.actions = mustPickActs(pend, p.hand); // exactly two (or all held)
+      var pend = { kind: 'bifa', picked: [], max: max, owner: p.id, pool: p.hand.slice() };
+      pend.actions = mustPickActs(pend, pend.pool); // exactly two (or all held); options stay stable
       E.setPending(st, pend);
     },
     'captain-cold': function (st, p) { // Persona face down until defeated
@@ -490,8 +516,8 @@
         o.heldUnderPersona = [];
       });
       if (!p.discards.length) return;
-      var pend = { kind: 'at', picked: [], max: 2, optional: true };
-      pend.actions = pickActs(pend, p.discards);
+      var pend = { kind: 'at', picked: [], max: 2, optional: true, pool: p.discards.slice() };
+      pend.actions = pickActs(pend, pend.pool); // options stay stable (snapshot); duplicates re-pickable
       E.setPending(st, pend); // may destroy up to two in discards
     },
     'black-manta': function (st, p) { E.addPower(st, p, 3); E.cardDraw(st, p, 1); },
@@ -500,6 +526,7 @@
         if (o.id === p.id || !o.hand.length) return;
         var id = o.hand.splice(randIdx(st, o.hand.length), 1)[0];
         log(st, C(id).name + " is revealed from " + o.name + "'s hand.");
+        E.pushReveal(st, id); // pop out every revealed card so any player can see it (stays in LOG)
         if (typeOf(id) !== 'location') {
           E.playCross(st, p, o.id, id); // Power/effects to the defeater
           o.discards.push(id);         // returns to the owner's Discards
@@ -518,7 +545,7 @@
     },
     'darkseid': function (st, p) { // may destroy two in hand: +5 else +3
       if (p.hand.length >= 2) {
-        var pend = { kind: 'ds', stage: 0, picked: [], max: 2 };
+        var pend = { kind: 'ds', stage: 0, picked: [], max: 2, pool: p.hand.slice() };
         pend.actions = [{ k: 'go' }, { k: 'no' }];
         E.setPending(st, pend);
       } else {
@@ -548,6 +575,7 @@
       var got = E.takeFromFaceDown(st, 1)[0];
       if (!got) return; // exhausted pile: nothing revealed
       log(st, C(got).name + " is revealed from the Main Deck.");
+      E.pushReveal(st, got); // pop out the revealed main-deck card (stays in LOG too)
       if (typeOf(got) === 'hero') { E.addPower(st, p, 3); st.destroyed.push(got); }
       else p.hand.push(got);
     },
@@ -582,9 +610,14 @@
     var pend = st.pending;
     if (!pend || !a) return;
     // Attack/defense choices belong to the TARGET being resolved (the
-    // defender / attacked player), not the attacker's turn player. Every
+    // defender / attacked player), not the attacker's turn player. The Joker's
+    // per-foe choice belongs to that FOE; Aquaman's Trident (end of turn) belongs
+    // to the player who played it, even though st.turn has already advanced. Every
     // other pending belongs to the turn player playing their own cards.
-    var ownerIdx = (st.attackQueue && st.attackQueue.awaiting) ? st.attackQueue.targets[0] : st.turn.idx;
+    var ownerIdx = st.turn.idx;
+    if (pend.kind === 'trident') ownerIdx = pend.owner;
+    else if (pend.kind === 'jkm') ownerIdx = pend.foes[pend.idx];
+    else if (st.attackQueue && st.attackQueue.awaiting) ownerIdx = st.attackQueue.targets[0];
     var p = st.players[ownerIdx];
     var keepPending = false;
 
@@ -597,6 +630,12 @@
       case 'hand': // Dark Knight / Catwoman: into your hand?
         if (a.k === 'yes') { p.hand.push(pend.id); log(st, C(pend.id).name + " goes into " + p.name + "'s hand."); }
         else p.discards.push(pend.id);
+        break;
+
+      case 'trident': // Aquaman's Trident (end of turn): one bought/gained card -> top of deck
+        if (a.k === 'skip') break; // leave everything in Discards
+        removeWhere(p, a.id); p.deck.push(a.id);
+        log(st, C(a.id).name + " goes on top of " + p.name + "'s deck.");
         break;
 
       case 'tohand': // Bat-Signal / Robin: pick one from Discards
@@ -626,9 +665,11 @@
         if (a.k === 'take') { st.lineup[a.slot] = null; E.gainToDiscards(st, p, a.id); }
         break;
 
-      case 'xray': // cross-play the revealed card; it stays atop owner's deck
+      case 'xray': { // cross-play the revealed card; it stays atop owner's deck
         E.playCross(st, p, a.owner, a.id);
+        st.turn._xrayActive = false; // allow any later X-Ray Vision this turn to trigger normally
         break;
+      }
 
       case 'tf': { // Two-Face: even/odd vs top of deck (0 is even)
           var top = p.deck.pop();
@@ -654,11 +695,11 @@
       }
 
       /* ---- stateful pickers (pick / done) ---- */
-      case 'lobo': // destroy up to two from hand+discards
+      case 'lobo': // destroy up to two from hand+discards (options stay stable via snapshot pool)
         if (a.k === 'done') break;
         removeWhere(p, a.id); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
         pend.picked.push(a.id);
-        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, p.hand.concat(p.discards)); }
+        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, pend.pool); }
         break;
 
       case 'hv': // Heat Vision: destroy one from hand+discards
@@ -667,33 +708,30 @@
         pend.picked.push(a.id);
         break;
 
-      case 'zz': // Zatanna: up to two from discards -> bottom of deck
+      case 'zz': // Zatanna: up to two from discards -> bottom of deck (options stay stable via snapshot pool)
         if (a.k === 'done') break;
         removeWhere(p, a.id); p.deck.unshift(a.id); log(st, C(a.id).name + " goes on the bottom of " + p.name + "'s deck.");
         pend.picked.push(a.id);
-        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, p.discards); }
+        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, pend.pool); }
         break;
 
-      case 'penguin': { // draw two, then choose and discard two
-        if (a.k !== 'done') pend.picked.push(a.id);
-        var complete = (a.k === 'done') || pend.picked.length >= 2;
-        if (!complete) {
-          keepPending = true;
-          pend.actions = unpickedActs(p.hand, pend.picked);
-        } else {
+      case 'penguin': { // draw two, then choose and discard exactly two (options stay stable via snapshot)
+        pend.picked.push(a.id);
+        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = mustPickActs(pend, pend.pool); }
+        else {
           pend.picked.forEach(function (x) { var i = p.hand.indexOf(x); if (i >= 0) p.hand.splice(i, 1); p.discards.push(x); });
           log(st, p.name + " discards their chosen cards.");
         }
         break;
       }
 
-      case 'ds': // Darkseid: destroy exactly two from hand -> +5 else +3
+      case 'ds': // Darkseid: destroy exactly two from hand -> +5 else +3 (options stay stable via snapshot pool)
         if (a.k === 'no') { E.addPower(st, p, 3); break; }
-        if (a.k === 'go') { pend.stage = 1; keepPending = true; pend.actions = mustPickActs(pend, p.hand); break; }
+        if (a.k === 'go') { pend.stage = 1; keepPending = true; pend.actions = mustPickActs(pend, pend.pool); break; }
         if (a.k === 'done') break; // unreachable: no done is offered
         removeWhere(p, a.id); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
         pend.picked.push(a.id);
-        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = mustPickActs(pend, p.hand); }
+        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = mustPickActs(pend, pend.pool); }
         else E.addPower(st, p, 5);
         break;
 
@@ -715,10 +753,10 @@
         break;
       }
 
-      case 'bifa': // Brainiac FA: chosen cards go to the shared pool
+      case 'bifa': // Brainiac FA: chosen cards go to the shared pool (options stay stable via snapshot pool)
         if (a.k === 'done') { bifaDone(st, pend); break; }
         removeWhere(p, a.id); pend.picked.push(a.id);
-        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = mustPickActs(pend, p.hand); }
+        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = mustPickActs(pend, pend.pool); }
         else bifaDone(st, pend);
         break;
 
@@ -756,7 +794,9 @@
           foe.discards.push(foe.hand.splice(randIdx(st, foe.hand.length), 1)[0]);
           log(st, foe.name + " discards a random card.");
         } else {
-          E.cardDraw(st, p, 1); // you draw instead
+          var jokerP = st.players[st.turn.idx]; // "you" = the player who used The Joker (not the foe)
+          E.cardDraw(st, jokerP, 1);
+          log(st, jokerP.name + " draws a card instead.");
         }
         pend.idx++;
         if (pend.idx < pend.foes.length) keepPending = true;
@@ -785,11 +825,11 @@
         else E.addPower(st, p, 3);
         break;
 
-      case 'at': // Atrocitus: destroy up to two from discards
+      case 'at': // Atrocitus: destroy up to two from discards (options stay stable via snapshot pool)
         if (a.k === 'done') break;
         removeWhere(p, a.id); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
         pend.picked.push(a.id);
-        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, p.discards); }
+        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, pend.pool); }
         break;
     }
 
@@ -809,6 +849,7 @@
   DCENGINE.hooks.finishAttack = finishAttack;
   DCENGINE.hooks.onDefeat = onDefeat;
   DCENGINE.hooks.rerouteCheck = rerouteCheck;
+  DCENGINE.hooks.endOfTurn = endOfTurn;
   DCENGINE.hooks.afterPlay = afterPlay;
   DCENGINE.hooks.resolvePending = resolvePending;
 

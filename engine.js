@@ -71,6 +71,10 @@ var DCENGINE = (function () {
   function cloneState(st) { return JSON.parse(JSON.stringify(st)); }
   function log(st, msg) { st.log.push(msg); }
 
+  /* Record a card that was revealed face-up by an effect. game.html pops it up
+   * (the #peek overlay, auto-dismiss after 10s or click-off) and it stays in the LOG. */
+  function pushReveal(st, id) { st.reveals.push(id); }
+
   /* ================= card data access ================= */
   function C(id) { return DCCARDS.byId[id]; }
   function typeOf(id) { return C(id).type; }
@@ -107,7 +111,7 @@ var DCENGINE = (function () {
       destroyed: [],
       turn: null, // assigned after setup (first-turn player known)
       pending: null, attackQueue: null, pendingFA: null,
-      log: [], over: false, scores: null, exhausted: false
+      log: [], reveals: [], over: false, scores: null, exhausted: false
     };
 
     // --- Main Deck from set composition (Kick excluded) ---
@@ -456,6 +460,10 @@ var DCENGINE = (function () {
     drawCards(st, p, 5);
     refillLineup(st);
 
+    // End-of-turn card effects (e.g. Aquaman's Trident). Runs while this turn's
+    // playedIds / boughtGainedThisTurn are still intact, before the next turn starts.
+    if (DCENGINE.hooks.endOfTurn) DCENGINE.hooks.endOfTurn(st, p);
+
     // reset per-turn state
     st.turn = freshTurn((st.turn.idx + 1) % st.players.length);
     // A Super-Villain that emerged last turn fires its First Appearance Attack at the start of this player's turn.
@@ -640,6 +648,7 @@ var DCENGINE = (function () {
     takeFromFaceDown: takeFromFaceDown, setPending: setPending, refillLineup: refillLineup,
     gainToDiscards: gainToDiscards, gainWeakness: gainWeakness,
     fireAttack: fireAttack, playCross: playCross,
+    pushReveal: pushReveal,
     defenseCardsInHand: defenseCardsInHand
   };
 

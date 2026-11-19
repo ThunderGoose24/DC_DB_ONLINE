@@ -477,7 +477,13 @@
   var myUserId = null, began = false, acked = {};
 
   function decisionOwner(s) {
-    if (s.pending) return (s.attackQueue && s.attackQueue.awaiting) ? s.attackQueue.targets[0] : s.turn.idx;
+    if (s.pending) {
+      // The Joker: each FOE makes their own choice. Aquaman's Trident: the player who played it,
+      // even though st.turn has already advanced past them at end of turn.
+      if (s.pending.kind === 'trident') return s.players[s.pending.owner];
+      if (s.pending.kind === 'jkm') return s.players[s.pending.foes[s.pending.idx]];
+      return (s.attackQueue && s.attackQueue.awaiting) ? s.attackQueue.targets[0] : s.turn.idx;
+    }
     if (s.attackQueue) return s.attackQueue.targets[0];
     return s.turn.idx;
   }
@@ -622,6 +628,7 @@
     lp.innerHTML = tail.map(function (l) { return '<div class="ll">' + escapeHtml(l) + '</div>'; }).join('');
     lp.scrollTop = lp.scrollHeight;
 
+    pumpReveals(); // pop out any newly-revealed cards (10s / click-off), then continue rendering controls
     renderControls();
   }
 
@@ -665,6 +672,7 @@
 
   var PENDING_HINT = {
     top: 'A card you bought or gained — put it on top of your deck, or leave it in Discards.',
+    trident: "Aquaman's Trident — at the end of your turn, put one card you bought or gained this turn on top of your deck.",
     hand: 'A card you bought or gained — put it into your hand, or leave it in Discards.',
     tohand: 'Choose a card from your Discards to return to your hand.',
     koa: 'King of Atlantis — destroy one of your discards for +3 Power, or keep it for +1.',
@@ -1015,6 +1023,7 @@
     if (!roll) return;
     var players = seats.map(function (s, i) { return { name: s.name, personaId: roll[i] }; });
     st = DCENGINE.newGame({ seed: Math.floor(Math.random() * 1e9), players: players, refillDestroyed: !!settings.refill });
+    revealedShown = 0; revealsInited = false; revealQueue.length = 0; // fresh game: start the reveal tracker clean
     document.getElementById('personaOverlay').style.display = 'none';
     running = true;
     tick();
@@ -1029,14 +1038,44 @@
   var peek = document.getElementById('peek');
   var peekImg = document.getElementById('peekImg');
   var peekName = document.getElementById('peekName');
-  function peekCard(id, name) {
+  function openPeek(id, name) { // shared: set image + caption and show the overlay
     if (!id) return;
     peekImg.src = img(id);
     peekName.textContent = name || (C(id) ? C(id).name : '');
     peek.classList.add('show');
   }
-  document.getElementById('peekX').addEventListener('click', function () { peek.classList.remove('show'); });
-  peek.addEventListener('click', function (ev) { if (ev.target === peek) peek.classList.remove('show'); });
+  function peekCard(id, name) { // manual peek (your hero / a Location / the top SV) — not part of the reveal queue
+    openPeek(id, name);
+  }
+
+  /* ---- effect reveals: pop out each revealed card for 10s or until clicked off ---- */
+  var revealQueue = [];      // ids waiting to be shown (in order)
+  var revealedShown = 0;     // how many st.reveals entries have already been enqueued
+  var revealsInited = false; // skip pre-existing reveals on first state / rejoin
+  var peekAutoTimer = null;
+  function showNextReveal() {
+    clearTimeout(peekAutoTimer);
+    if (!revealQueue.length) return;
+    openPeek(revealQueue.shift());
+    peekAutoTimer = setTimeout(closePeek, 10000); // auto-dismiss after 10s (or click-off sooner)
+  }
+  function closePeek() {
+    clearTimeout(peekAutoTimer);
+    peek.classList.remove('show');
+    if (revealQueue.length) showNextReveal(); // progress the queue
+  }
+  document.getElementById('peekX').addEventListener('click', closePeek);
+  peek.addEventListener('click', function (ev) { if (ev.target === peek) closePeek(); });
+
+  /* Feed new reveals from state into the popup queue. Called every render(). */
+  function pumpReveals() {
+    if (!st) return;
+    var rv = st.reveals || [];
+    if (!revealsInited) { revealedShown = rv.length; revealsInited = true; } // don't re-pop pre-existing on (re)join
+    for (var i = revealedShown; i < rv.length; i++) revealQueue.push(rv[i]);
+    revealedShown = rv.length;
+    if (!peek.classList.contains('show') && revealQueue.length) showNextReveal();
+  }
 
   // Player chips: click a name to peek their Super Hero; click a Location thumbnail to peek it.
   document.getElementById('playerStack').addEventListener('click', function (ev) {
