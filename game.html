@@ -52,16 +52,14 @@
     aspect-ratio: 10 / 4.6;
   }
 
-  /* Players — top-left corner of the screen */
+  /* Players — a row across the top of the screen, starting from the left */
   .players {
     position: fixed;
     top: 16px;
     left: 18px;
     z-index: 5;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
   }
+  #playerStack { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; }
 
 
   .chip {
@@ -91,8 +89,8 @@
   .chip .sub { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.04em; color: rgba(255,255,255,0.7); text-transform: none; margin-top: 2px; }
   .chip.current { border-color: #ff2d3c; box-shadow: 0 0 0 3px rgba(255,45,60,0.35), 0 3px 10px rgba(0,0,0,0.5); }
 
-  /* Player-chip Location thumbnails (fan off the chip's right edge; click to peek) */
-  .ploc { position:absolute; top:8%; width:52px; aspect-ratio:2.5/3.5; border-radius:4px; overflow:hidden; background:#0a0f1c; border:1px solid rgba(150,195,255,.4); box-shadow:0 1px 4px rgba(0,0,0,.6); cursor:pointer; z-index:1; }
+  /* Player-chip Location thumbnails (under the icon, fanned left→right with overlap; click to peek) */
+  .ploc { position:absolute; top:calc(100% + 8px); width:52px; aspect-ratio:2.5/3.5; border-radius:4px; overflow:hidden; background:#0a0f1c; border:1px solid rgba(150,195,255,.4); box-shadow:0 1px 4px rgba(0,0,0,.6); cursor:pointer; z-index:1; }
   .ploc img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
   .ploc:hover { transform: scale(1.28); z-index:40; box-shadow:0 3px 10px rgba(0,0,0,.7); }
 
@@ -114,11 +112,11 @@
 
   .turn-now b { color: #fff; font-weight: 800; }
 
-  /* End Game — centered at the top of the screen */
+  /* End Game — centered at the bottom of the screen */
   .endgame {
     position: fixed;
     left: 50%;
-    top: 16px;
+    bottom: 16px;
     transform: translateX(-50%);
     z-index: 5;
     padding: 0.5rem 1.4rem;
@@ -326,7 +324,7 @@
     <div class="lu-extras" id="luExtras"></div>
 
 
-    <div class="hand" style="left:10.64%; top:60.29%; width:79%; height:32.6%"><span class="lbl">Your Hand</span><div id="handCards"></div></div>
+    <div class="hand" style="left:10.64%; top:58.53%; width:79%; height:32.6%"><span class="lbl">Your Hand</span><div id="handCards"></div></div>
   </div>
 
   <!-- Public stacks pinned to the screen's right edge (moved out of .table).
@@ -507,17 +505,18 @@
       var c = document.createElement('div');
       c.className = 'chip' + (cur ? ' current' : '');
       c.setAttribute('data-i', i);
-      var sub = 'Deck ' + p.deck.length + ' · Hand ' + p.hand.length;
-      if (cur) sub += ' · P' + st.turn.power;
+      // Power is turn-based (st.turn.power), so only the active player shows it — up next to their name.
+      var nameLine = p.name + (cur ? ' - P' + st.turn.power : '');
+      var sub = 'Deck ' + p.deck.length + ' · Hand ' + p.hand.length + ' · Discard ' + p.discards.length;
       c.innerHTML = '<img class="chip-hero" src="' + img(p.personaId) + '" alt="">' +
-        '<span class="chip-txt"><span>' + p.name + '</span><span class="sub">' + sub + '</span></span>';
+        '<span class="chip-txt"><span>' + nameLine + '</span><span class="sub">' + sub + '</span></span>';
       // Played Locations: hug the right edge of this player's chip (click to peek)
       var locs = p.locations;
       for (var li = 0; li < locs.length; li++) {
         var ld = document.createElement('div');
         ld.className = 'ploc';
         ld.setAttribute('data-id', locs[li]);
-        ld.style.left = 'calc(100% + ' + (li * 20) + 'px)';
+        ld.style.left = (li * 26) + 'px'; // under the icon: start at its left edge, step right with overlap
         ld.innerHTML = '<img src="' + img(locs[li]) + '" alt="">';
         c.appendChild(ld);
       }
