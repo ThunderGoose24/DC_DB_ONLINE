@@ -73,7 +73,7 @@ var DCENGINE = (function () {
 
   /* Record a card that was revealed face-up by an effect. game.html pops it up
    * (the #peek overlay, auto-dismiss after 10s or click-off) and it stays in the LOG. */
-  function pushReveal(st, id) { st.reveals.push(id); }
+  function pushReveal(st, id, forIdx) { st.reveals.push({ id: id, for: forIdx }); } // only pops out for the seat it concerns (pumpReveals filters)
 
   /* ================= card data access ================= */
   function C(id) { return DCCARDS.byId[id]; }

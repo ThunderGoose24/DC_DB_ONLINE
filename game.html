@@ -923,13 +923,20 @@
 
     onRoster(); // sync local seats from the carried roster, then confirm our seat below
 
+    room.onError(function (err) {
+      if (!err) return;
+      if (err.code === 'room-full') { netMsg('Room is full.'); return; }
+      // Surface real connection failures (relays blocked, WebRTC can't reach the other side…)
+      // instead of hanging on "Connecting…". Guests had no error handler at all before.
+      var msg = err.message || String(err);
+      netMsg('Connection problem — ' + msg + '. Try another network (Wi-Fi ↔ mobile data).');
+    });
     if (isHostPeer) {
       actAction.onMessage(function (d, meta) {
         var userId = meta && meta.userId;
         if (d && d.t === 'ready') { if (userId) acked[userId] = true; return; } // guest confirmed its snapshot
         if (d && d.a) { applyAction(d.a); tick(); } // guest's in-game action
       });
-      room.onError(function (err) { if (err && err.code === 'room-full') netMsg('Room is full.'); });
     } else {
       stateAction.onMessage(onState); // our snapshot, targeted to us by the host
     }
@@ -969,8 +976,16 @@
       ? 'The table starts as soon as everyone is back in the room.'
       : 'Your seat and pick are saved in the room — just hang tight.';
     netMsg(isHostPeer ? 'Waiting for every player to reconnect…' : 'Connecting…');
-    if (window.__DCROOM__) window.__DCROOM__.joinDCRoom(roomId).then(function (r) { room = r; bootRoom(); });
-    else window.__onDCROOMReady__ = function (m) { m.joinDCRoom(roomId).then(function (r) { room = r; bootRoom(); }); };
+    function joinFailed(e) { netMsg("Couldn't join the room (" + ((e && e.message) || e) + ")."); }
+    function joinRoomSafe(m) {
+      var p = m.joinDCRoom(roomId);
+      // If the room never comes up (relays blocked on this network, or an older browser that can't load
+      // the module), say so instead of hanging on "Connecting…".
+      setTimeout(function () { if (!room) netMsg('Still connecting — if this stays, your phone\'s browser may be too old (iOS needs Safari 16.4+), or the network is blocking the relays: try another browser, or switch Wi-Fi ↔ mobile data.'); }, 20000);
+      return p;
+    }
+    if (window.__DCROOM__) { joinRoomSafe(window.__DCROOM__).then(function (r) { room = r; bootRoom(); }).catch(joinFailed); }
+    else { window.__onDCROOMReady__ = function (m) { joinRoomSafe(m).then(function (r) { room = r; bootRoom(); }).catch(joinFailed); }; }
   }
 
   /* ---- the loop ------------------------------------------------- */
@@ -1093,7 +1108,7 @@
     if (!st) return;
     var rv = st.reveals || [];
     if (!revealsInited) { revealedShown = rv.length; revealsInited = true; } // don't re-pop pre-existing on (re)join
-    for (var i = revealedShown; i < rv.length; i++) revealQueue.push(rv[i]);
+    for (var i = revealedShown; i < rv.length; i++) { if (isMine(rv[i].for)) revealQueue.push(rv[i].id); } // only pop out cards that concern YOU
     revealedShown = rv.length;
     if (!peek.classList.contains('show') && revealQueue.length) showNextReveal();
   }

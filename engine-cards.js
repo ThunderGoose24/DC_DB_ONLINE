@@ -155,7 +155,7 @@
       if (!p.deck.length) return;
       var top = p.deck[p.deck.length - 1];
       log(st, C(top).name + " is revealed from the top of " + p.name + "'s deck.");
-      E.pushReveal(st, top);
+      E.pushReveal(st, top, p.id); // owner only
     },
 
     'man-of-steel': function (st, p) { // all Super Powers from discards -> hand
@@ -385,7 +385,7 @@
       var top = p.deck.pop();
       p.discards.push(top);
       log(st, C(top).name + " is discarded from the top of " + p.name + "'s deck.");
-      E.pushReveal(st, top); // pop out what was revealed (stays in LOG too)
+      E.pushReveal(st, top, p.id); // for the TARGET whose deck was peeked (stays in LOG for everyone)
       if (C(top).cost >= 1) E.gainWeakness(st, p, 1);
     },
     'scarecrow': function (st, p) { E.gainWeakness(st, p, 1); },
@@ -394,7 +394,7 @@
       var top = p.deck.pop();
       p.discards.push(top);
       log(st, C(top).name + " is discarded from the top of " + p.name + "'s deck.");
-      E.pushReveal(st, top); // pop out each revealed card so you see what got played this turn
+      E.pushReveal(st, top, p.id); // for the TARGET whose deck was peeked (stays in LOG for everyone)
       if (typeOf(top) !== 'location') q.collected.push({ owner: p.id, id: top });
     }
   };
@@ -532,7 +532,7 @@
         if (o.id === p.id || !o.hand.length) return;
         var id = o.hand.splice(randIdx(st, o.hand.length), 1)[0];
         log(st, C(id).name + " is revealed from " + o.name + "'s hand.");
-        E.pushReveal(st, id); // pop out every revealed card so any player can see it (stays in LOG)
+        E.pushReveal(st, id, o.id); // for the owner whose hand was peeked (stays in LOG for everyone)
         if (typeOf(id) !== 'location') {
           E.playCross(st, p, o.id, id); // Power/effects to the defeater
           o.discards.push(id);         // returns to the owner's Discards
@@ -581,7 +581,7 @@
       var got = E.takeFromFaceDown(st, 1)[0];
       if (!got) return; // exhausted pile: nothing revealed
       log(st, C(got).name + " is revealed from the Main Deck.");
-      E.pushReveal(st, got); // pop out the revealed main-deck card (stays in LOG too)
+      E.pushReveal(st, got, p.id); // for the player who gains it / gets +3 (stays in LOG for everyone)
       if (typeOf(got) === 'hero') { E.addPower(st, p, 3); st.destroyed.push(got); }
       else p.hand.push(got);
     },
@@ -681,7 +681,7 @@
           var top = p.deck.pop();
           if (top == null) break; // deck emptied before this resolved; nothing to peek
           log(st, C(top).name + " is revealed from the top of " + p.name + "'s deck.");
-          E.pushReveal(st, top); // pop out so you can read it after the blind choice
+          E.pushReveal(st, top, p.id); // owner only — pop out so you can read it after the blind choice
           var match = (a.k === 'even') ? (C(top).cost % 2 === 0) : (C(top).cost % 2 === 1);
           if (match) { p.hand.push(top); log(st, C(top).name + " is drawn to the hand."); }
           else { p.discards.push(top); log(st, C(top).name + " is discarded."); }

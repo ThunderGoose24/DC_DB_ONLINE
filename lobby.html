@@ -385,7 +385,12 @@
     refreshPicker();
 
     room.onError(function (err) {
-      if (err && err.code === 'room-full') setStatus('Room is full.');
+      if (!err) return;
+      if (err.code === 'room-full') { setStatus('Room is full.'); return; }
+      // Surface real connection failures (relays blocked, WebRTC can't reach the other side…)
+      // instead of hanging on "Connecting…".
+      var msg = err.message || String(err);
+      setStatus('Connection problem — ' + msg + '. Try another network (Wi-Fi ↔ mobile data).');
     });
 
     // Guests: when the host says go, carry our roster into the game page and move.
@@ -437,7 +442,7 @@
       var iv = setInterval(function () {
         var players = (rosterState.get() || { players: [] }).players;
         for (var i = 0; i < players.length; i++) if (players[i].userId === myUserId) { mySeat = i; break; }
-        if (mySeat >= 0) { clearInterval(iv); renderSeats(players); refreshPicker(); if (!nameIn.value) nameIn.value = players[mySeat].name; }
+        if (mySeat >= 0) { clearInterval(iv); setStatus('Connected.'); renderSeats(players); refreshPicker(); if (!nameIn.value) nameIn.value = players[mySeat].name; }
       }, 250);
       pickTitle.textContent = 'Pick your Super Hero as ' + (isHost ? 'You' : 'Player') + '.';
     });
@@ -535,8 +540,16 @@
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
 
   // ---- wait for Trystero (module loads after parse; http(s) only) --------
-  if (window.__DCROOM__) { window.__DCROOM__.joinDCRoom(roomId).then(function (r) { room = r; boot(); }); }
-  else { window.__onDCROOMReady__ = function (m) { m.joinDCRoom(roomId).then(function (r) { room = r; boot(); }); }; setStatus('Connecting…'); }
+  function joinFailed(e) { setStatus("Couldn't join the room (" + ((e && e.message) || e) + ")."); }
+  function joinRoomSafe(m) {
+    var p = m.joinDCRoom(roomId);
+    // If the room never comes up (relays blocked on this network, or an older browser that can't load
+    // the module), say so instead of hanging on "Connecting…".
+    setTimeout(function () { if (!room && statusEl.textContent === 'Connecting…') setStatus('Still connecting — if this stays, your phone\'s browser may be too old (iOS needs Safari 16.4+), or the network is blocking the relays: try another browser, or switch Wi-Fi ↔ mobile data.'); }, 20000);
+    return p;
+  }
+  if (window.__DCROOM__) { joinRoomSafe(window.__DCROOM__).then(function (r) { room = r; boot(); }).catch(joinFailed); }
+  else { window.__onDCROOMReady__ = function (m) { joinRoomSafe(m).then(function (r) { room = r; boot(); }).catch(joinFailed); }; setStatus('Connecting…'); }
 
 })();
 </script>
