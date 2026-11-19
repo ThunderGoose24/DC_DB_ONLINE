@@ -314,17 +314,17 @@
   <span class="turn-now" id="turnNow"></span>
 
   <div class="table">
-    <div class="slot destroyed" style="left:10.64%; top:26.58%; width:10%; height:30.43%"><span class="lbl">Destroyed</span><div class="dstk" id="destroyedStack"></div><span class="count" id="cDestroyed"></span></div>
-    <div class="slot"           style="left:22.14%; top:26.58%; width:10%; height:30.43%"><img class="deckback" id="deckBack" src="assets/cards/cardback.jpg" alt=""><span class="lbl">Main Deck</span><span class="count" id="cMainDeck"></span></div>
-    <div class="lu-slot" data-i="0" style="left:33.64%; top:26.58%; width:10%; height:30.43%"></div>
-    <div class="lu-slot" data-i="1" style="left:45.14%; top:26.58%; width:10%; height:30.43%"></div>
-    <div class="lu-slot" data-i="2" style="left:56.64%; top:26.58%; width:10%; height:30.43%"></div>
-    <div class="lu-slot" data-i="3" style="left:68.14%; top:26.58%; width:10%; height:30.43%"></div>
-    <div class="lu-slot" data-i="4" style="left:79.64%; top:26.58%; width:10%; height:30.43%"></div>
+    <div class="slot destroyed" style="left:4.75%; top:26.58%; width:10%; height:30.43%"><span class="lbl">Destroyed</span><div class="dstk" id="destroyedStack"></div><span class="count" id="cDestroyed"></span></div>
+    <div class="slot"           style="left:16.25%; top:26.58%; width:10%; height:30.43%"><img class="deckback" id="deckBack" src="assets/cards/cardback.jpg" alt=""><span class="lbl">Main Deck</span><span class="count" id="cMainDeck"></span></div>
+    <div class="lu-slot" data-i="0" style="left:27.75%; top:26.58%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="1" style="left:39.25%; top:26.58%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="2" style="left:50.75%; top:26.58%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="3" style="left:62.25%; top:26.58%; width:10%; height:30.43%"></div>
+    <div class="lu-slot" data-i="4" style="left:73.75%; top:26.58%; width:10%; height:30.43%"></div>
     <div class="lu-extras" id="luExtras"></div>
 
 
-    <div class="hand" style="left:10.64%; top:58.53%; width:79%; height:32.6%"><span class="lbl">Your Hand</span><div id="handCards"></div></div>
+    <div class="hand" style="left:4.75%; top:58.53%; width:79%; height:32.6%"><span class="lbl">Your Hand</span><div id="handCards"></div></div>
   </div>
 
   <!-- Public stacks pinned to the screen's right edge (moved out of .table).
@@ -570,7 +570,7 @@
     // Line-Up overflow cards (index >= 5): shown overlapping past the last slot
     var luEx = document.getElementById('luExtras');
     luEx.innerHTML = '';
-    var luSlotLefts = [33.64, 45.14, 56.64, 68.14, 79.64]; // left edge of each base slot (matches the .lu-slot markup)
+    var luSlotLefts = [27.75, 39.25, 50.75, 62.25, 73.75]; // left edge of each base slot (matches the .lu-slot markup)
     for (var ei = 5; ei < st.lineup.length; ei++) {
       var eid = st.lineup[ei];
       if (!eid) continue;
