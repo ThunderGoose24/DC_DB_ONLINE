@@ -162,10 +162,11 @@ var DCENGINE = (function () {
       if (!used) st.box.push(c.id);
     });
 
-    // --- first turn: The Flash goes first if in play, else player 0 ---
+    // --- first turn: The Flash goes first if in play; otherwise a random seat.
+    // Seeded, so a game still replays identically per seed (AI determinism).
     var fi = -1;
     st.players.forEach(function (p, i) { if (p.personaId === 'the-flash-mc') fi = i; });
-    st.turn = freshTurn(fi >= 0 ? fi : 0);
+    st.turn = freshTurn(fi >= 0 ? fi : Math.floor(nextRand(st) * st.players.length));
 
     log(st, 'Game set up. ' + st.players.length + ' players.');
     return st;
@@ -411,10 +412,30 @@ var DCENGINE = (function () {
 
   /* ================= clean-up & refill ================= */
   function refillLineup(st) {
-    // Only the base 5 slots refill from the Main Deck. Overflow cards (index >= 5),
-    // added by card effects, are "extra" and do NOT get refilled when they leave.
-    for (var i = 0; i < 5; i++) {
-      if (st.lineup[i] === null) takeFromFaceDown(st, 1).forEach(function (c) { st.lineup[i] = c; });
+    // Overflow cards (index >= 5), added by card effects such as The Anti-Monitor's
+    // First Appearance, move into free base slots BEFORE anything is drawn from the
+    // Main Deck — a freed slot takes an overlapping card down into the row.
+    var moved = true;
+    while (moved) {
+      moved = false;
+      for (var i = 0; i < 5; i++) {
+        if (st.lineup[i] === null) {
+          for (var k = 5; k < st.lineup.length; k++) {
+            if (st.lineup[k] !== null) {
+              st.lineup[i] = st.lineup[k];
+              st.lineup.splice(k, 1); // drop the vacated overflow position
+              log(st, C(st.lineup[i]).name + ' moves into the Line-Up.');
+              moved = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    // Only the base 5 slots refill from the Main Deck. Overflow cards are "extra"
+    // and do NOT get refilled when they leave (bought/defeated).
+    for (var i2 = 0; i2 < 5; i2++) {
+      if (st.lineup[i2] === null) takeFromFaceDown(st, 1).forEach(function (c) { st.lineup[i2] = c; });
     }
   }
 

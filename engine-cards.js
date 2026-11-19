@@ -766,10 +766,11 @@
         st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
         break;
 
-      case 'amfa': { // Anti-Monitor FA: chosen card -> the Line-Up
+      case 'amfa': { // Anti-Monitor FA: chosen card -> the Line-Up (base slots only)
         var ai = p.hand.indexOf(a.id);
         if (ai >= 0) p.hand.splice(ai, 1);
-        var slot3 = st.lineup.indexOf(null);
+        var slot3 = -1;
+        for (var s3 = 0; s3 < 5; s3++) { if (st.lineup[s3] === null) { slot3 = s3; break; } } // free BASE slot only
         if (slot3 >= 0) { st.lineup[slot3] = a.id; log(st, C(a.id).name + " is added to the Line-Up."); }
         else { st.lineup.push(a.id); log(st, C(a.id).name + " is added to the Line-Up (overlapping - no free slot)."); }
         break;

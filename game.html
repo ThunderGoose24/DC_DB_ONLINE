@@ -964,8 +964,9 @@
     if (!st || !running) return;
     if (!isHostPeer) return; // guests never run the engine — they render snapshots + send actions
     // Smooth Action→Buying flow: empty hand + nothing pending means that player is done playing (no button).
+    // Applies to EVERY seat — the host runs it authoritatively so online players get it too.
     var cur = st.players[st.turn.idx];
-    if (!st.over && isMine(st.turn.idx) && st.turn.phase === 'action' && !st.pending && !st.attackQueue && cur.hand.length === 0) {
+    if (!st.over && st.turn.phase === 'action' && !st.pending && !st.attackQueue && cur.hand.length === 0) {
       if (DCENGINE.actions(st).some(function (a) { return a.kind === 'to-buying'; })) {
         applyAction({ kind: 'to-buying' });
         tick();
@@ -1032,8 +1033,13 @@
   }
 
   document.getElementById('beginBtn').addEventListener('click', begin);
-  document.getElementById('endGameBtn').addEventListener('click', function () { window.location.href = 'lobby.html'; });
-  document.getElementById('rsLobby').addEventListener('click', function () { window.location.href = 'lobby.html'; });
+  // Back to the SHARED lobby: keep room + role so the host and every human land back in the same room.
+  function backToLobby() {
+    if (roomId) location.href = 'lobby.html?role=' + (_role === 'guest' ? 'guest' : 'host') + '&room=' + encodeURIComponent(roomId);
+    else location.href = 'lobby.html'; // local pass-and-play: no room to return to
+  }
+  document.getElementById('endGameBtn').addEventListener('click', backToLobby);
+  document.getElementById('rsLobby').addEventListener('click', backToLobby);
 
   // Peek a card by id/name (a player's Super Hero or one of their played Locations).
   var peek = document.getElementById('peek');
