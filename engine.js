@@ -663,7 +663,7 @@ var DCENGINE = (function () {
   /* Internal API used only by engine-cards.js (the hooks). */
   api._ = {
     C: C, typeOf: typeOf, log: log, markPlayed: markPlayed,
-    drawCards: drawCards, cardDraw: cardDraw,
+    reshuffle: reshuffle, drawCards: drawCards, cardDraw: cardDraw,
     addPower: addPower, powerOf: powerOf,
     shuffleInPlace: shuffleInPlace, nextRand: nextRand,
     takeFromFaceDown: takeFromFaceDown, setPending: setPending, refillLineup: refillLineup,

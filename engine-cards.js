@@ -148,10 +148,7 @@
     'super-speed': function (st, p) { E.cardDraw(st, p, 1); },
 
     'power-ring': function (st, p) { // reveal top of your deck; it stays on top (not discarded)
-      if (!p.deck.length && p.discards.length) { // no deck left: reshuffle discards into a new one first
-        p.deck = E.shuffleInPlace(st, p.discards.splice(0));
-        log(st, p.name + ' shuffles their Discards into a new Deck.');
-      }
+      E.reshuffle(st, p); // no deck left -> shuffle discards into a new one so there's a top to reveal
       if (!p.deck.length) return;
       var top = p.deck[p.deck.length - 1];
       log(st, C(top).name + " is revealed from the top of " + p.name + "'s deck.");
@@ -231,6 +228,7 @@
     },
 
     'nth-metal': function (st, p) { // look at top of deck; may destroy it
+      E.reshuffle(st, p); // no deck left -> shuffle discards so there's a top to look at
       if (!p.deck.length) return;
       var top = p.deck[p.deck.length - 1];
       log(st, p.name + " looks at the top card: " + C(top).name + '.');
@@ -268,6 +266,7 @@
     },
 
     'two-face': function (st, p) { // even/odd vs top of deck — blind choice first, then reveal
+      E.reshuffle(st, p); // no deck left -> shuffle discards so the blind choice can open
       if (!p.deck.length) return;
       E.setPending(st, { kind: 'tf', actions: [{ k: 'even' }, { k: 'odd' }] });
     },
@@ -321,10 +320,7 @@
       var opts = [];
       st.players.forEach(function (o) {
         if (o.id === p.id) return;
-        if (!o.deck.length && o.discards.length) { // empty deck: reshuffle so the foe still has a top to reveal
-          o.deck = E.shuffleInPlace(st, o.discards.splice(0));
-          log(st, o.name + ' shuffles their Discards into a new Deck.');
-        }
+        E.reshuffle(st, o); // empty deck -> shuffle discards so the foe still has a top to reveal
         if (!o.deck.length) return; // no deck and nothing to shuffle in: no top to reveal
         var top = o.deck[o.deck.length - 1];
         log(st, C(top).name + " is revealed from " + o.name + "'s deck.");
@@ -381,6 +377,7 @@
       E.setPending(st, { kind: 'hq', actions: acts });
     },
     'poison-ivy': function (st, p) { // top of deck discarded; cost>=1 -> Weakness
+      E.reshuffle(st, p); // no deck left -> shuffle discards so the discard can happen
       if (!p.deck.length) return;
       var top = p.deck.pop();
       p.discards.push(top);
@@ -390,6 +387,7 @@
     },
     'scarecrow': function (st, p) { E.gainWeakness(st, p, 1); },
     'starro': function (st, p, q) { // top discarded; non-Location collected
+      E.reshuffle(st, p); // no deck left -> shuffle discards so the discard can happen
       if (!p.deck.length) return;
       var top = p.deck.pop();
       p.discards.push(top);
@@ -408,6 +406,7 @@
       log(st, p.name + " puts a card face down under their Super Hero.");
     },
     'black-manta': function (st, p) { // discard top of own deck; cost>=1 chooses
+      E.reshuffle(st, p); // no deck left -> shuffle discards so the discard can happen
       if (!p.deck.length) return;
       var top = p.deck.pop();
       log(st, C(top).name + " is discarded from the top of " + p.name + "'s deck.");
@@ -599,7 +598,7 @@
       var foes = [];
       st.players.forEach(function (o) { if (o.id !== p.id) foes.push(o.id); });
       if (!foes.length) return;
-      E.setPending(st, { kind: 'jkm', idx: 0, foes: foes, actions: [{ k: 'disc' }, { k: 'draw' }] });
+      E.setPending(st, { kind: 'jkm', idx: 0, owner: p.id, foes: foes, actions: [{ k: 'disc' }, { k: 'draw' }] });
     }
   };
 
