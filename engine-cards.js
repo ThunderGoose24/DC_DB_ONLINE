@@ -316,7 +316,8 @@
     },
 
     'xray-vision': function (st, p) { // foes reveal deck tops; play one cross
-      if (st.turn._xrayActive) return; // already resolving an X-Ray Vision cross-play — don't recurse
+      if (st.turn._xrayUsed) return; // already fired this turn — no re-reveal/re-cross-play (breaks Clayface/loop)
+      st.turn._xrayUsed = true; // mark used now so a replay/cross-play later this turn can't fire it again
       var opts = [];
       st.players.forEach(function (o) {
         if (o.id === p.id) return;
@@ -327,7 +328,6 @@
         if (typeOf(top) !== 'location') opts.push({ owner: o.id, id: top });
       });
       if (!opts.length) return; // nothing eligible to play: effect doesn't happen
-      st.turn._xrayActive = true; // set only when a choice is actually opened
       var acts = [];
       opts.forEach(function (o, i) { acts.push({ k: 'pick', n: i, owner: o.owner, id: o.id }); });
       E.setPending(st, { kind: 'xray', actions: acts });
@@ -672,7 +672,6 @@
 
       case 'xray': { // cross-play the revealed card; it stays atop owner's deck
         E.playCross(st, p, a.owner, a.id);
-        st.turn._xrayActive = false; // allow any later X-Ray Vision this turn to trigger normally
         break;
       }
 
