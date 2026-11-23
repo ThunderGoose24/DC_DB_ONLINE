@@ -559,7 +559,12 @@ var DCENGINE = (function () {
 
   function svCost(st, p, id) {
     var cost = C(id).cost;
-    if (st.turn.playedIds && st.turn.playedIds.indexOf('green-arrows-bow') >= 0) cost -= 2;
+    // Green Arrow's Bow stacks: each one played this turn (own or cross-played — both land in
+    // playedIds via markPlayed) makes Super-Villains cost 2 less to defeat.
+    if (st.turn.playedIds) {
+      var bows = st.turn.playedIds.filter(function (x) { return x === 'green-arrows-bow'; }).length;
+      cost -= 2 * bows;
+    }
     return Math.max(0, cost);
   }
 
