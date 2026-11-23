@@ -289,6 +289,10 @@
   .rs-btn { margin-top:1rem; width:100%; padding:0.8rem 1rem; font-family:inherit; font-size:0.95rem; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#fff; background:linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; }
   .rs-btn:hover { filter:brightness(1.25); }
 
+  /* End-game quit confirm */
+  #confirmOverlay { position:fixed; inset:0; z-index:30; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.8); }
+  #confirmOverlay.show { display:flex; }
+
 </style>
 </head>
 <body>
@@ -370,6 +374,13 @@
     <div class="rs-title">Final Scores</div>
     <div id="rsRows"></div>
     <button class="rs-btn" type="button" id="rsLobby">Back to Lobby</button>
+  </div></div>
+
+  <!-- End-game quit confirm -->
+  <div id="confirmOverlay"><div class="rs-panel">
+    <div class="rs-title">Are you sure you want to quit?</div>
+    <button class="rs-btn" type="button" id="cfmYes">Yes</button>
+    <button class="rs-btn" type="button" id="cfmNo">No</button>
   </div></div>
 
 <script src="cards.js"></script>
@@ -596,7 +607,7 @@
       luEx.appendChild(ed);
     }
 
-    // Active player's hand: revealed only while it's THEIR turn and they're a seat this client controls.
+    // Hand area: online always shows THIS client's own seat face-up (no card backs); local/hot-seat keeps the active player's hand as backs.
     var hc = document.getElementById('handCards');
     hc.innerHTML = '';
     var tIdx = st.turn.idx;
@@ -613,6 +624,18 @@
         d.setAttribute('aria-label', C(id).name);
         d.innerHTML = '<img src="' + img(id) + '" alt="">';
         if (actYou) d.addEventListener('click', function () { doHuman({ kind: 'play', cardId: id }); });
+        hc.appendChild(d);
+      });
+    } else if ((_role === 'host' || _role === 'guest') && mySeats.length > 0) {
+      // ONLINE-ONLY: always show this client's own seat face-up (no card backs), even on other players' turns.
+      var hpOwn = st.players[mySeats[0]];
+      if (hlbl) hlbl.textContent = 'Your Hand — ' + hpOwn.name;
+      hpOwn.hand.forEach(function (id) {
+        var d = document.createElement('button');
+        d.type = 'button';
+        d.className = 'hcard'; // readable, not playable: it's not your turn to play
+        d.setAttribute('aria-label', C(id).name);
+        d.innerHTML = '<img src="' + img(id) + '" alt="">';
         hc.appendChild(d);
       });
     } else {
@@ -1067,7 +1090,11 @@
     if (roomId) location.href = 'lobby.html?role=' + (_role === 'guest' ? 'guest' : 'host') + '&room=' + encodeURIComponent(roomId);
     else location.href = 'lobby.html'; // local pass-and-play: no room to return to
   }
-  document.getElementById('endGameBtn').addEventListener('click', backToLobby);
+  // END GAME: ask "are you sure you want to quit?" (YES/NO) before leaving.
+  var confirmOverlay = document.getElementById('confirmOverlay');
+  document.getElementById('endGameBtn').addEventListener('click', function () { confirmOverlay.classList.add('show'); });
+  document.getElementById('cfmYes').addEventListener('click', function () { confirmOverlay.classList.remove('show'); backToLobby(); });
+  document.getElementById('cfmNo').addEventListener('click', function () { confirmOverlay.classList.remove('show'); });
   document.getElementById('rsLobby').addEventListener('click', backToLobby);
 
   // Peek a card by id/name (a player's Super Hero or one of their played Locations).
