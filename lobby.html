@@ -22,7 +22,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start; /* top-align so a tall (multi-player) layout scrolls down, never clipping the LOBBY title */
     color: #fff;
     font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     background-color: #04060c;
@@ -61,12 +61,12 @@
 
   .sub {
     z-index: 1; position: relative; font-size: 0.9rem; letter-spacing: 0.18em; text-transform: uppercase;
-    color: rgba(255,255,255,0.6); margin-bottom: 1.1rem; text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+    color: rgba(255,255,255,0.6); margin-bottom: 0.7rem; text-shadow: 0 1px 3px rgba(0,0,0,0.9);
   }
 
   .linkbox {
     z-index: 1; position: relative; display: flex; gap: 0.5rem; align-items: center;
-    width: 420px; margin-bottom: 1.3rem;
+    width: 420px; margin-bottom: 0.85rem;
   }
   .linkbox input {
     flex: 1; padding: 0.7rem 0.9rem; font-family: inherit; font-size: 0.85rem; letter-spacing: 0.02em;
@@ -80,12 +80,12 @@
   }
   .copybtn:hover { filter: brightness(1.35); }
 
-  .namebox { z-index: 1; position: relative; display: flex; gap: 0.5rem; align-items: center; width: 420px; margin-bottom: 1.3rem; }
+  .namebox { z-index: 1; position: relative; display: flex; gap: 0.5rem; align-items: center; width: 420px; margin-bottom: 0.85rem; }
   .namebox label { flex: none; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.7); white-space: nowrap; }
   .namebox input { flex: 1; padding: 0.6rem 0.9rem; font-family: inherit; font-size: 0.85rem; letter-spacing: 0.02em; color: #fff; background: rgba(4,6,12,0.6); border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; }
   .namebox input::placeholder { color: rgba(255,255,255,0.4); }
 
-  .slots { z-index: 1; position: relative; display: flex; flex-direction: column; gap: 0.7rem; width: 420px; margin-bottom: 1.2rem; }
+  .slots { z-index: 1; position: relative; display: flex; flex-direction: column; gap: 0.5rem; width: 420px; margin-bottom: 0.75rem; }
   .slot {
     display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.8rem 1rem; border-radius: 10px;
     background: linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border: 1px solid rgba(255,255,255,0.22);
@@ -100,9 +100,9 @@
   .rm { flex: none; width: 26px; height: 26px; border-radius: 999px; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 1rem; line-height: 1; cursor: pointer; }
   .rm:hover { background: rgba(255,45,60,0.35); border-color: rgba(255,120,130,0.6); color: #fff; }
 
-  .menu { z-index: 1; position: relative; display: flex; flex-direction: column; gap: 0.9rem; align-items: center; width: 420px; /* was min(420px,86vw) — fixed for the 1600x900 design */ }
+  .menu { z-index: 1; position: relative; display: flex; flex-direction: column; gap: 0.6rem; align-items: center; width: 420px; /* was min(420px,86vw) — fixed for the 1600x900 design */ }
   .btn {
-    width: 100%; padding: 0.85rem 1rem; font-family: inherit; font-size: 1rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    width: 100%; padding: 0.72rem 1rem; font-family: inherit; font-size: 1rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
     color: #fff; text-align: center; background: linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96));
     border: 1px solid rgba(255,255,255,0.22); border-radius: 10px; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
   }
@@ -112,11 +112,11 @@
   .btn[disabled]:hover { transform: none; filter: none; box-shadow: none; }
   .btn-primary { background: linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97)); border-color: rgba(255,120,130,0.5); box-shadow: 0 0 22px rgba(255,45,60,0.3); }
 
-  .status { z-index: 1; position: relative; margin-top: 0.9rem; font-size: 0.82rem; letter-spacing: 0.04em; color: rgba(255,255,255,0.7); text-align: center; min-height: 1.2em; }
+  .status { z-index: 1; position: relative; margin-top: 0.55rem; font-size: 0.82rem; letter-spacing: 0.04em; color: rgba(255,255,255,0.7); text-align: center; min-height: 1.2em; }
 
   /* Hero picker */
-  .picker { z-index: 1; position: relative; width: 560px; /* was min(560px,92vw) — fixed for the 1600x900 design */ margin-top: 1.3rem; padding: 1rem; border-radius: 14px; background: rgba(4,6,12,0.55); border: 1px solid rgba(255,255,255,0.14); }
-  .picker h2 { font-size: 0.9rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 0.9rem; text-align: center; }
+  .picker { z-index: 1; position: relative; width: 560px; /* was min(560px,92vw) — fixed for the 1600x900 design */ margin-top: 0.85rem; padding: 0.75rem; border-radius: 14px; background: rgba(4,6,12,0.55); border: 1px solid rgba(255,255,255,0.14); }
+  .picker h2 { font-size: 0.9rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 0.55rem; text-align: center; }
   .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px,1fr)); gap: 0.6rem; }
   .po-card { aspect-ratio: 5/7; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: rgba(255,255,255,0.04); padding: 0; }
   .po-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -152,7 +152,7 @@
   .panel-done { margin-top: 1.3rem; width: 100%; padding: 0.85rem 1rem; font-family: inherit; font-size: 1rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #fff; background: linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97)); border: 1px solid rgba(255,120,130,0.5); border-radius: 10px; cursor: pointer; box-shadow: 0 0 18px rgba(255,45,60,0.25); }
   .panel-done:hover { filter: brightness(1.2); }
 
-  .legal { position: absolute; bottom: 1.1rem; left: 0; right: 0; z-index: 1; text-align: center; padding: 0 1rem; font-size: 0.72rem; line-height: 1.55; letter-spacing: 0.03em; color: rgba(255,255,255,0.8); text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
+  .legal { margin-top: 1rem; z-index: 1; text-align: center; padding: 0 1rem; font-size: 0.72rem; line-height: 1.55; letter-spacing: 0.03em; color: rgba(255,255,255,0.8); text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
 </style>
 </head>
 <body>
