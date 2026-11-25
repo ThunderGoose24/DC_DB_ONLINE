@@ -52,14 +52,15 @@
     aspect-ratio: 10 / 4.6;
   }
 
-  /* Players — a row across the top of the screen, starting from the left */
+  /* Players — a row across the top of the screen, centered on screen (midpoint between the two middle players sits at screen-center for any count) */
   .players {
     position: fixed;
     top: 16px;
-    left: 18px;
+    left: 0;
+    right: 0;
     z-index: 5;
   }
-  #playerStack { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; }
+  #playerStack { display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 12px; }
 
 
   .chip {
@@ -194,7 +195,7 @@
   /* Phase action bar (To Buying / buys / End Turn) */
   #phaseBar { position: fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:6; display:none; flex-direction:column; align-items:center; gap:6px; max-width:720px; } /* was min(720px,52vw) — fixed for the 1600x900 design */
   #phaseBar.show { display:flex; }
-  #playedRow { display:none; gap:3px; flex-wrap:nowrap; width:max-content; max-width:367px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; } /* single centered row; ~10 cards fit, beyond that it scrolls left-right with no visible bar */
+  #playedRow { display:none; gap:3px; flex-wrap:nowrap; min-width:0; max-width:367px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; } /* fixed box ~10 cards wide; all cards stay inside, scroll left-right (no bar) when more */
   #playedRow::-webkit-scrollbar { display:none; }
   .played-card { cursor:pointer; flex-shrink:0; }
   .played-card img { width:34px; aspect-ratio:2.5/3.5; object-fit:contain; border-radius:3px; background:#0a0f1c; border:1px solid rgba(255,210,74,.7); box-shadow:0 1px 3px rgba(0,0,0,.6); }
