@@ -94,30 +94,11 @@
   .ploc img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
   .ploc:hover { transform: scale(1.28); z-index:40; box-shadow:0 3px 10px rgba(0,0,0,.7); }
 
-  .turn-now {
-    position: fixed;
-    top: 0;
-    right: 16px; /* flush with the right edge of the public stacks (x=1584) */
-    z-index: 5;
-    padding: 0.4rem 1rem;
-    border-radius: 8px;
-    background: rgba(4,6,12,0.5);
-    border: 1px solid rgba(255,255,255,0.2);
-    font-size: 0.95rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.75);
-  }
-
-  .turn-now b { color: #fff; font-weight: 800; }
-
-  /* End Game — centered at the bottom of the screen */
+  /* End Game — now at the bottom-left (the phase action bar moved to bottom-center) */
   .endgame {
     position: fixed;
-    left: 50%;
-    bottom: 16px;
-    transform: translateX(-50%);
+    left: 16px;
+    bottom: 18px;
     z-index: 5;
     padding: 0.5rem 1.4rem;
     font-family: inherit;
@@ -133,7 +114,7 @@
     transition: transform 0.15s ease, filter 0.15s ease;
   }
 
-  .endgame:hover { transform: translateX(-50%) translateY(-2px); filter: brightness(1.25); }
+  .endgame:hover { transform: translateY(-2px); filter: brightness(1.25); }
 
   /* Line-Up row */
   .slot {
@@ -211,9 +192,10 @@
   .dstk img { position:absolute; bottom:0; width:94%; height:auto; object-fit:contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,.6)); }
 
   /* Phase action bar (To Buying / buys / End Turn) */
-  #phaseBar { position: fixed; left:16px; bottom:18px; z-index:6; display:none; flex-direction:column; align-items:flex-start; gap:6px; max-width:720px; } /* was min(720px,52vw) — fixed for the 1600x900 design */
+  #phaseBar { position: fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:6; display:none; flex-direction:column; align-items:flex-start; gap:6px; max-width:720px; } /* was min(720px,52vw) — fixed for the 1600x900 design */
   #phaseBar.show { display:flex; }
-  #playedRow { display:none; gap:3px; flex-wrap:wrap; width:max-content; pointer-events:none; }
+  #playedRow { display:none; gap:3px; flex-wrap:wrap; width:max-content; }
+  .played-card { cursor:pointer; }
   .played-card img { width:34px; aspect-ratio:2.5/3.5; object-fit:contain; border-radius:3px; background:#0a0f1c; border:1px solid rgba(255,210,74,.7); box-shadow:0 1px 3px rgba(0,0,0,.6); }
   #phaseButtons { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-start; }
   .abtn { font-family:inherit; font-size:0.8rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#fff; padding:0.5rem 0.9rem; border-radius:8px; cursor:pointer; background:linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border:1px solid rgba(255,255,255,0.3); transition:filter .15s ease; }
@@ -221,12 +203,18 @@
   .abtn.primary { background:linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97)); border-color:rgba(255,120,130,0.5); }
 
   /* Peek overlay — big card; click the backdrop or X to close */
-  #peek { position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,.6); }
+  #peek { position:fixed; inset:0; z-index:20; display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(3,5,10,.6); }
   #peek.show { display:flex; }
   .peek-card { aspect-ratio:2.5/3.5; width:414px; position:relative; margin:0; } /* was min(46vh,42vw) — fixed for the 1600x900 design */
   .peek-card img { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 6px 24px rgba(0,0,0,.8)); pointer-events:none; }
   .peek-card figcaption { position:absolute; left:50%; bottom:-1.7rem; transform:translateX(-50%); font-size:1.1rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#fff; white-space:nowrap; }
   .peek-x { position:absolute; top:14px; right:20px; z-index:21; width:34px; height:34px; border-radius:50%; font-size:1.4rem; line-height:1; color:#fff; background:rgba(4,6,12,.7); border:1px solid rgba(255,255,255,.3); cursor:pointer; }
+  /* Buy / Put back — under a popped-out buyable card (Line-Up / Kick / SV) */
+  .peek-actions { display:none; gap:1rem; margin-top:1.6rem; }
+  .peek-actions.show { display:flex; }
+  .pk-btn { font-family:inherit; font-size:0.9rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#fff; padding:0.65rem 1.4rem; border-radius:8px; cursor:pointer; background:linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border:1px solid rgba(255,255,255,0.3); transition:filter .15s ease; }
+  .pk-btn:hover { filter:brightness(1.3); }
+  .pk-btn.primary { background:linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97)); border-color:rgba(255,120,130,0.5); }
 
   /* Choice modal (defense / pending) */
   #choiceModal { position:fixed; inset:0; z-index:8; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.55); }
@@ -236,8 +224,10 @@
   .cm-hint { font-size:0.82rem; line-height:1.5; color:rgba(255,255,255,0.7); margin-bottom:0.6rem; white-space:pre-line; }
   .cm-cards { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:0 0 0.9rem; }
   .cm-cards:empty { display:none; }
-  .cm-card { position:relative; width:76px; aspect-ratio:2.5/3.5; border-radius:6px; overflow:hidden; background:#0a0f1c; border:1px solid rgba(150,195,255,.4); }
+  .cm-card { position:relative; width:76px; aspect-ratio:2.5/3.5; border-radius:6px; overflow:hidden; background:#0a0f1c; border:1px solid rgba(150,195,255,.4); cursor:pointer; }
   .cm-card img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+  /* Section labels inside the choice modal (Hand / Discard split for "hand or discard" destroys) */
+  .cm-sec { font-size:0.72rem; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.6); margin:0.5rem 0 0.25rem; }
   .cm-actions { display:flex; flex-direction:column; gap:0.6rem; }
   .cm-btn { font-family:inherit; font-size:0.9rem; font-weight:700; letter-spacing:0.04em; text-align:left; color:#fff; padding:0.65rem 0.9rem; border-radius:8px; cursor:pointer; background:rgba(42,51,72,0.9); border:1px solid rgba(255,255,255,0.28); transition:filter .15s ease; display:flex; align-items:center; gap:0.6rem; }
   .cm-btn:hover { filter:brightness(1.3); }
@@ -318,8 +308,6 @@
 
   <button class="endgame" type="button" id="endGameBtn">End Game</button>
 
-  <span class="turn-now" id="turnNow"></span>
-
   <div class="table">
     <div class="slot destroyed" style="left:4.75%; top:26.58%; width:10%; height:30.43%"><span class="lbl">Destroyed</span><div class="dstk" id="destroyedStack"></div><span class="count" id="cDestroyed"></span></div>
     <div class="slot"           style="left:16.25%; top:26.58%; width:10%; height:30.43%"><img class="deckback" id="deckBack" src="assets/cards/cardback.jpg" alt=""><span class="lbl">Main Deck</span><span class="count" id="cMainDeck"></span></div>
@@ -351,7 +339,7 @@
     <div class="cm-actions" id="cmActions"></div>
   </div></div>
 
-  <div id="peek"><button type="button" class="peek-x" id="peekX">&times;</button><figure class="peek-card"><img id="peekImg" alt=""><figcaption id="peekName"></figcaption></figure></div>
+  <div id="peek"><button type="button" class="peek-x" id="peekX">&times;</button><figure class="peek-card"><img id="peekImg" alt=""><figcaption id="peekName"></figcaption></figure><div class="peek-actions" id="peekActions"></div></div>
 
   <!-- Persona pre-game -->
   <div id="personaOverlay"><div class="po-panel">
@@ -544,9 +532,6 @@
       ps.appendChild(c);
     });
 
-    document.getElementById('turnNow').innerHTML =
-      'Now: <b>' + st.players[st.turn.idx].name + '</b> · ' + (st.turn.phase === 'action' ? 'Action' : 'Buying');
-
     // public zones
     document.getElementById('cDestroyed').textContent = st.destroyed.length;
     document.getElementById('cMainDeck').textContent = st.faceDown.length;
@@ -735,11 +720,11 @@
     var prow = document.getElementById('playedRow');
     var modal = document.getElementById('choiceModal');
     if (!st || st.over) { bar.classList.remove('show'); modal.classList.remove('show'); return; }
-    var owner = decisionOwner(st);
-    if (!isMine(owner)) { bar.classList.remove('show'); modal.classList.remove('show'); return; }
-
-    // In-use cards: shown above the buttons for the whole turn (action + buying).
+    // In-use cards: shown at the bottom for ANY player's turn — not just your own. Nothing else changes.
     renderInUse(prow, st.turn.playedCards);
+
+    var owner = decisionOwner(st);
+    if (!isMine(owner)) { btns.innerHTML = ''; bar.classList.add('show'); modal.classList.remove('show'); return; }
 
     // Defense / pending choice -> centered modal
     if (st.pending || st.attackQueue) {
@@ -767,10 +752,46 @@
         rc.className = 'cm-card';
         rc.innerHTML = '<img src="' + img(st.pending.id) + '" alt="">';
         cardsEl.appendChild(rc);
+      } else if (st.attackQueue) {
+        // The attacking card itself — click it to see the full card.
+        var ac = document.createElement('div');
+        ac.className = 'cm-card';
+        ac.innerHTML = '<img src="' + img(st.attackQueue.cardId) + '" alt="">';
+        ac.addEventListener('click', function () { peekCard(st.attackQueue.cardId); });
+        cardsEl.appendChild(ac);
       }
       var box = document.getElementById('cmActions');
       box.innerHTML = '';
-      acts.forEach(function (a) {
+      // "Hand or discard" destroy picks (Heat Vision / Lobo): show Hand first, then Discard — same menu, scroll down for the rest.
+      var rows = acts.map(function (a) { return { act: a }; });
+      if (st.pending && (st.pending.kind === 'hv' || st.pending.kind === 'lobo')) {
+        var op = st.players[decisionOwner(st)];
+        var hAvail = {}, dAvail = {};
+        op.hand.forEach(function (id) { hAvail[id] = (hAvail[id] || 0) + 1; });
+        op.discards.forEach(function (id) { dAvail[id] = (dAvail[id] || 0) + 1; });
+        var handActs = [], discActs = [], restActs = [];
+        acts.forEach(function (a) {
+          if (!a.id) { restActs.push(a); return; } // e.g. Done
+          if ((hAvail[a.id] || 0) > 0) { hAvail[a.id]--; handActs.push(a); }
+          else if ((dAvail[a.id] || 0) > 0) { dAvail[a.id]--; discActs.push(a); }
+          else restActs.push(a);
+        });
+        rows = [];
+        if (handActs.length && discActs.length) rows.push({ label: 'Hand' });
+        handActs.forEach(function (a) { rows.push({ act: a }); });
+        if (handActs.length && discActs.length) rows.push({ label: 'Discard' });
+        discActs.forEach(function (a) { rows.push({ act: a }); });
+        restActs.forEach(function (a) { rows.push({ act: a }); });
+      }
+      rows.forEach(function (r) {
+        if (r.label != null) {
+          var sEl = document.createElement('div');
+          sEl.className = 'cm-sec';
+          sEl.textContent = r.label;
+          box.appendChild(sEl);
+          return;
+        }
+        var a = r.act;
         var b = document.createElement('button');
         b.className = 'cm-btn'; b.type = 'button';
         // Card options (pick / destroy / take, and defend) get small clickable art — full size on click.
@@ -823,6 +844,7 @@
       var d = document.createElement('div');
       d.className = 'played-card';
       d.innerHTML = '<img src="' + img(id) + '" alt="">';
+      d.addEventListener('click', function () { peekCard(id); }); // pop out like any other card
       prow.appendChild(d);
     });
     prow.style.display = 'flex';
@@ -1105,10 +1127,24 @@
     if (!id) return;
     peekImg.src = img(id);
     peekName.textContent = name || (C(id) ? C(id).name : '');
+    document.getElementById('peekActions').classList.remove('show'); // plain peek: no Buy / Put back
     peek.classList.add('show');
   }
   function peekCard(id, name) { // manual peek (your hero / a Location / the top SV) — not part of the reveal queue
     openPeek(id, name);
+  }
+  function openBuyPeek(id, buyAction) { // pop out a buyable card with Buy / Put back under it
+    openPeek(id);
+    var pa = document.getElementById('peekActions');
+    pa.innerHTML = '';
+    var buy = document.createElement('button');
+    buy.className = 'pk-btn primary'; buy.type = 'button'; buy.textContent = 'Buy';
+    buy.addEventListener('click', function () { closePeek(); doHuman(buyAction); });
+    var back = document.createElement('button');
+    back.className = 'pk-btn'; back.type = 'button'; back.textContent = 'Put back';
+    back.addEventListener('click', function () { closePeek(); });
+    pa.appendChild(buy); pa.appendChild(back);
+    pa.classList.add('show');
   }
 
   /* ---- effect reveals: pop out each revealed card for 10s or until clicked off ---- */
@@ -1160,20 +1196,24 @@
     var id = st.lineup[i];
     if (!id) return;
     if (isMine(decisionOwner(st)) && !st.pending && !st.attackQueue && st.turn.phase === 'buying' && C(id).cost <= st.turn.power) {
-      doHuman({ kind: 'buy-lineup', slot: i });
+      openBuyPeek(id, { kind: 'buy-lineup', slot: i }); // pop out with Buy / Put back instead of buying straight away
     }
   });
 
-    // Pile buys + SV pop-out: click a pile to buy from it; the top SV pops out like peeking your hero.
+    // Pile buys + SV pop-out: click a pile to buy from it; each pops out with Buy / Put back.
     document.querySelector('.p-kick').addEventListener('click', function () {
       if (!st || st.over) return;
       var acts = DCENGINE.actions(st);
-      if (isMine(decisionOwner(st)) && !st.pending && !st.attackQueue && st.turn.phase === 'buying' && acts.some(function (a) { return a.kind === 'buy-kick'; })) doHuman({ kind: 'buy-kick' });
+      if (isMine(decisionOwner(st)) && !st.pending && !st.attackQueue && st.turn.phase === 'buying' && acts.some(function (a) { return a.kind === 'buy-kick'; })) openBuyPeek('kick', { kind: 'buy-kick' });
     });
     document.querySelector('.p-sv').addEventListener('click', function () {
       if (!st || st.over) return;
       var top = st.svStack[0];
-      if (top) peekCard(top, C(top).name); // pop out like clicking your player icon (no longer buys on click — use the Defeat button)
+      if (top) {
+        var acts = DCENGINE.actions(st);
+        if (isMine(decisionOwner(st)) && !st.pending && !st.attackQueue && st.turn.phase === 'buying' && acts.some(function (a) { return a.kind === 'defeat-sv'; })) openBuyPeek(top, { kind: 'defeat-sv', cardId: top }); // Buy = defeat it
+        else peekCard(top, C(top).name); // not buyable right now: plain pop-out like clicking your player icon
+      }
     });
 
   if (_role === 'host' || _role === 'guest') {
