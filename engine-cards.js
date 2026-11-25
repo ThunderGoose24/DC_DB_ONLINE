@@ -272,7 +272,7 @@
     },
 
     'clayface': function (st, p) { // choose a card you played this turn; play again
-      var list = st.turn.playedIds.filter(function (x) { return x !== 'clayface'; });
+      var list = st.turn.playedIds.filter(function (x) { return x !== 'clayface' && typeOf(x) !== 'location'; }); // Locations are unique — can't be replayed/copied
       if (!list.length) return;
       var acts = [];
       list.forEach(function (id, i) { acts.push({ k: 'pick', n: i, id: id }); });
