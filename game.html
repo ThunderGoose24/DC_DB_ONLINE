@@ -192,10 +192,11 @@
   .dstk img { position:absolute; bottom:0; width:94%; height:auto; object-fit:contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,.6)); }
 
   /* Phase action bar (To Buying / buys / End Turn) */
-  #phaseBar { position: fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:6; display:none; flex-direction:column; align-items:flex-start; gap:6px; max-width:720px; } /* was min(720px,52vw) — fixed for the 1600x900 design */
+  #phaseBar { position: fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:6; display:none; flex-direction:column; align-items:center; gap:6px; max-width:720px; } /* was min(720px,52vw) — fixed for the 1600x900 design */
   #phaseBar.show { display:flex; }
-  #playedRow { display:none; gap:3px; flex-wrap:wrap; width:max-content; }
-  .played-card { cursor:pointer; }
+  #playedRow { display:none; gap:3px; flex-wrap:nowrap; width:max-content; max-width:367px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; } /* single centered row; ~10 cards fit, beyond that it scrolls left-right with no visible bar */
+  #playedRow::-webkit-scrollbar { display:none; }
+  .played-card { cursor:pointer; flex-shrink:0; }
   .played-card img { width:34px; aspect-ratio:2.5/3.5; object-fit:contain; border-radius:3px; background:#0a0f1c; border:1px solid rgba(255,210,74,.7); box-shadow:0 1px 3px rgba(0,0,0,.6); }
   #phaseButtons { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-start; }
   .abtn { font-family:inherit; font-size:0.8rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#fff; padding:0.5rem 0.9rem; border-radius:8px; cursor:pointer; background:linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border:1px solid rgba(255,255,255,0.3); transition:filter .15s ease; }
