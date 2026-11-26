@@ -500,29 +500,34 @@ var DCENGINE = (function () {
   }
 
   /* ================= scoring ================= */
-  function countInDeck(p, id) {
-    var n = 0; p.deck.forEach(function (c) { if (c === id) n++; }); return n;
+  function countInList(ids, id) {
+    var n = 0; ids.forEach(function (c) { if (c === id) n++; }); return n;
   }
   function scoreGame(st) {
     var out = {};
-    st.players.forEach(function (p) {
-      var total = 0, all = p.hand.concat(p.deck, p.discards, p.locations, p.id === st.turn.idx ? st.turn.playedCards : []); // in-use cards count too (unswept on the SV-defeat ending) — but only for their OWNER; never credit another player's pile
-      all.forEach(function (id) {
+    // What each player OWNS at game end: deck + hand + discards + locations, plus the
+    // turn player's in-use pile (unswept on the SV-defeat ending). Never another's.
+    var owned = st.players.map(function (p, i) {
+      return p.deck.concat(p.hand, p.discards, p.locations, i === st.turn.idx ? st.turn.playedCards : []);
+    });
+    // Pools across ALL players ("any player owns") for the end-of-game effects.
+    var heroes = 0, equipment = 0;
+    owned.forEach(function (ids) { ids.forEach(function (id) { if (typeOf(id) === 'hero') heroes++; else if (typeOf(id) === 'equipment') equipment++; }); });
+    var ssTotal = 0;
+    owned.forEach(function (ids) { ssTotal += countInList(ids, 'suicide-squad'); });
+    st.players.forEach(function (p, i) {
+      var total = 0;
+      owned[i].forEach(function (id) {
         var base = C(id).vp;
-        if (id === 'bizarro') base = 2 * countInDeck(p, 'weakness'); // REPLACES printed VP
-        else if (id === 'suicide-squad') base = countInDeck(p, 'suicide-squad');
-        else if (id === 'green-arrow' && countOtherTypeInDeck(p, 'hero', id) >= 4) base = 5;
-        else if (id === 'utility-belt' && countOtherTypeInDeck(p, 'equipment', id) >= 4) base = 5;
+        if (id === 'bizarro') base = 2 * countInList(owned[i], 'weakness'); // every Weakness THIS player owns, 2 VP each (replaces printed VP)
+        else if (id === 'suicide-squad') base = ssTotal; // every Suicide Squad in the game counts for every one: N copies -> N^2 total
+        else if (id === 'green-arrow' && heroes >= 4) base = 5; // 4+ Heroes owned by any player
+        else if (id === 'utility-belt' && equipment >= 4) base = 5; // 4+ Equipment owned by any player
         total += base;
       });
       out[p.id] = total;
     });
     return out;
-  }
-  function countOtherTypeInDeck(p, type, exceptId) {
-    var n = 0;
-    p.deck.forEach(function (c) { if (typeOf(c) === type && c !== exceptId) n++; });
-    return n;
   }
 
   /* ================= actions / doAction API ================= */
