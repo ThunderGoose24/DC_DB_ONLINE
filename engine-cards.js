@@ -63,6 +63,15 @@
     return unpickedActs(cands, pend.picked);
   }
 
+  /* lobo/hv pickers: options carry their pile (hand/discards) so the right
+   * instance is destroyed even when both piles hold a card of the same name. */
+  function locPickActs(pend) { // pend.pool: [{loc,id}]; pend.picked holds pool indices
+    var acts = [];
+    pend.pool.forEach(function (o, i) { if (pend.picked.indexOf(i) < 0) acts.push({ k: 'pick', n: i, loc: o.loc, id: o.id }); });
+    if (pend.optional || pend.picked.length > 0) acts.push({ k: 'done' });
+    return acts;
+  }
+
   /* ================= reroute checks (buy/gain time) ============ */
   function rerouteCheck(st, p, id) {
     var t = st.turn;
@@ -221,17 +230,22 @@
     },
 
     'lobo': function (st, p) { // may destroy up to two in hand/discards
-      var cands = p.hand.concat(p.discards);
-      if (!cands.length) return;
-      var pend = { kind: 'lobo', picked: [], max: 2, optional: true, pool: cands.slice() };
-      pend.actions = pickActs(pend, pend.pool); // options stay stable (snapshot); duplicates re-pickable
+      var pool = [];
+      p.hand.forEach(function (id) { pool.push({ loc: 'hand', id: id }); });
+      p.discards.forEach(function (id) { pool.push({ loc: 'discards', id: id }); });
+      if (!pool.length) return;
+      var pend = { kind: 'lobo', picked: [], max: 2, optional: true, pool: pool };
+      pend.actions = locPickActs(pend); // options stay stable (snapshot); same name in both piles stays pickable per pile
       E.setPending(st, pend);
     },
 
     'heat-vision': function (st, p) { // may destroy one in hand/discards
-      if (!p.hand.length && !p.discards.length) return;
-      var pend = { kind: 'hv', picked: [], max: 1, optional: true };
-      pend.actions = pickActs(pend, p.hand.concat(p.discards));
+      var pool = [];
+      p.hand.forEach(function (id) { pool.push({ loc: 'hand', id: id }); });
+      p.discards.forEach(function (id) { pool.push({ loc: 'discards', id: id }); });
+      if (!pool.length) return;
+      var pend = { kind: 'hv', picked: [], max: 1, optional: true, pool: pool };
+      pend.actions = locPickActs(pend);
       E.setPending(st, pend);
     },
 
@@ -323,9 +337,9 @@
       E.setPending(st, { kind: 'cheetah', actions: acts });
     },
 
-    'xray-vision': function (st, p) { // foes reveal deck tops; play one cross
-      if (st.turn._xrayUsed) return; // already fired this turn — no re-reveal/re-cross-play (breaks Clayface/loop)
-      st.turn._xrayUsed = true; // mark used now so a replay/cross-play later this turn can't fire it again
+    'xray-vision': function (st, p) { // foes reveal deck tops; play one cross — may fire twice per turn
+      if ((st.turn._xrayFired || 0) >= 2) return; // cap at two firings this turn — breaks the X-Ray-on-X-Ray reshuffle loop
+      st.turn._xrayFired = (st.turn._xrayFired || 0) + 1;
       var opts = [];
       st.players.forEach(function (o) {
         if (o.id === p.id) return;
@@ -465,14 +479,12 @@
       p.discards.push.apply(p.discards, dump); // discarded cards go to Discards
       p.hand = keep;
     },
-    'sinestro': function (st, p) { // discard one per Hero in hand (flagged read)
+    'sinestro': function (st, p) { // discard one per Hero in hand — choose which (flagged read)
       var heroes = p.hand.filter(function (id) { return typeOf(id) === 'hero'; }).length;
       if (!heroes) return;
-      var n = Math.min(heroes, p.hand.length);
-      for (var i = 0; i < n; i++) {
-        p.discards.push(p.hand.splice(randIdx(st, p.hand.length), 1)[0]);
-      }
-      log(st, p.name + " discards " + n + ' card(s).');
+      var pend = { kind: 'sinf', picked: [], max: Math.min(heroes, p.hand.length), pool: p.hand.slice() };
+      pend.actions = mustPickActs(pend, pend.pool); // one per Hero revealed; options stay stable (snapshot)
+      E.setPending(st, pend);
     },
     'the-anti-monitor': function (st, p) { // choose cost>=1 -> the Line-Up
       var opts = [];
@@ -709,18 +721,21 @@
       }
 
       /* ---- stateful pickers (pick / done) ---- */
-      case 'lobo': // destroy up to two from hand+discards (options stay stable via snapshot pool)
+      case 'lobo': // destroy up to two from hand+discards — each option carries its pile
         if (a.k === 'done') break;
-        removeFromLoc(p, a.id, a.loc); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
-        pend.picked.push(a.id);
-        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, pend.pool); }
+        var lo = pend.pool[a.n];
+        removeFromLoc(p, a.id, lo.loc); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
+        pend.picked.push(a.n);
+        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = locPickActs(pend); }
         break;
 
-      case 'hv': // Heat Vision: destroy one from hand+discards
+      case 'hv': { // Heat Vision: destroy one from hand+discards — each option carries its pile
         if (a.k === 'done') break;
-        removeFromLoc(p, a.id, a.loc); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
-        pend.picked.push(a.id);
+        var hvo = pend.pool[a.n];
+        removeFromLoc(p, a.id, hvo.loc); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
+        pend.picked.push(a.n);
         break;
+      }
 
       case 'zz': // Zatanna: up to two from discards -> bottom of deck (options stay stable via snapshot pool)
         if (a.k === 'done') break;
@@ -730,6 +745,16 @@
         break;
 
       case 'penguin': { // draw two, then choose and discard exactly two (options stay stable via snapshot)
+        pend.picked.push(a.id);
+        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = mustPickActs(pend, pend.pool); }
+        else {
+          pend.picked.forEach(function (x) { var i = p.hand.indexOf(x); if (i >= 0) p.hand.splice(i, 1); p.discards.push(x); });
+          log(st, p.name + " discards their chosen cards.");
+        }
+        break;
+      }
+
+      case 'sinf': { // Sinestro FA: one discard per Hero revealed — the chosen cards go to Discards
         pend.picked.push(a.id);
         if (pend.picked.length < pend.max) { keepPending = true; pend.actions = mustPickActs(pend, pend.pool); }
         else {

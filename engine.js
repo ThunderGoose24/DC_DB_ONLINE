@@ -506,7 +506,7 @@ var DCENGINE = (function () {
   function scoreGame(st) {
     var out = {};
     st.players.forEach(function (p) {
-      var total = 0, all = p.hand.concat(p.deck, p.discards, p.locations);
+      var total = 0, all = p.hand.concat(p.deck, p.discards, p.locations, st.turn.playedCards); // in-use cards count too (unswept on the SV-defeat ending)
       all.forEach(function (id) {
         var base = C(id).vp;
         if (id === 'bizarro') base = 2 * countInDeck(p, 'weakness'); // REPLACES printed VP

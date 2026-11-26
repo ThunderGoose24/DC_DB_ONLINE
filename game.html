@@ -246,8 +246,10 @@
   .ds-card { width:150px; aspect-ratio:2.5/3.5; border-radius:6px; cursor:pointer; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.14); }
   .ds-card img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
 
-  /* #8 Discard count link in the player chip sub-line */
-  .disc-link { text-decoration:underline; cursor:pointer; color:#9fd3ff; }
+  /* Pile browser sections (destroyed pile / end-game card review) */
+  .slot.destroyed { cursor:pointer; }
+  .ds-sec { margin-bottom:1.2rem; }
+  .ds-sec-label { font-size:.8rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.6); margin-bottom:.7rem; }
 
   /* Choice modal (defense / pending) */
   #choiceModal { position:fixed; inset:0; z-index:8; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.55); }
@@ -307,7 +309,8 @@
   #resultsOverlay.show { display:flex; }
   .rs-panel { width:420px; /* was min(420px,90vw) — fixed for the 1600x900 design */ background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,0.16); border-radius:16px; padding:1.6rem; box-shadow:0 18px 60px rgba(0,0,0,0.7); text-align:center; }
   .rs-title { font-size:1.3rem; font-weight:900; letter-spacing:0.14em; text-transform:uppercase; margin-bottom:1rem; color:#fff; }
-  .rs-row { display:flex; justify-content:space-between; gap:1rem; padding:0.5rem 0.7rem; border-radius:8px; background:rgba(255,255,255,0.06); margin-bottom:0.5rem; font-weight:700; letter-spacing:0.04em; }
+  .rs-row { display:flex; justify-content:space-between; gap:1rem; padding:0.5rem 0.7rem; border-radius:8px; background:rgba(255,255,255,0.06); margin-bottom:0.5rem; font-weight:700; letter-spacing:0.04em; cursor:pointer; }
+  .rs-sub { font-size:.8rem; color:rgba(255,255,255,.55); margin-top:.6rem; }
   .rs-row.win { outline:2px solid #ffd24a; }
   .rs-btn { margin-top:1rem; width:100%; padding:0.8rem 1rem; font-family:inherit; font-size:0.95rem; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#fff; background:linear-gradient(180deg, rgba(42,51,72,0.96), rgba(21,28,45,0.96)); border:1px solid rgba(255,255,255,0.3); border-radius:10px; cursor:pointer; }
   .rs-btn:hover { filter:brightness(1.25); }
@@ -390,11 +393,11 @@
     </div>
   </div></div>
 
-  <!-- #8 Discard options screen: all cards in the clicked player's discard pile -->
+  <!-- Pile browser: destroyed pile + end-game per-player card review -->
   <div id="discardScreen"><div class="ds-panel">
     <button type="button" class="ds-x" id="dsX">&times;</button>
     <div class="ds-title" id="dsTitle"></div>
-    <div class="ds-grid" id="dsGrid"></div>
+    <div id="dsBody"></div>
   </div></div>
 
   <!-- Persona pre-game -->
@@ -417,6 +420,7 @@
   <div id="resultsOverlay"><div class="rs-panel">
     <div class="rs-title">Final Scores</div>
     <div id="rsRows"></div>
+    <div class="rs-sub">Click a player to see every card they ended with.</div>
     <button class="rs-btn" type="button" id="rsLobby">Back to Lobby</button>
   </div></div>
 
@@ -572,7 +576,7 @@
       c.setAttribute('data-i', i);
       // Power is turn-based (st.turn.power), so only the active player shows it — up next to their name.
       var nameLine = p.name + (cur ? ' - P' + st.turn.power : '');
-      var sub = 'Deck ' + p.deck.length + ' · Hand ' + p.hand.length + ' · <span class="disc-link">Discard ' + p.discards.length + '</span>'; // #8: clickable -> discard options screen
+      var sub = 'Deck ' + p.deck.length + ' · Hand ' + p.hand.length + ' · Discard ' + p.discards.length;
       c.innerHTML = '<img class="chip-hero" src="' + img(p.personaId) + '" alt="">' +
         '<span class="chip-txt"><span>' + nameLine + '</span><span class="sub">' + sub + '</span></span>';
       // Played Locations: hug the right edge of this player's chip (click to peek)
@@ -708,7 +712,7 @@
       switch (a.kind) {
         case 'play': return 'Play ' + C(a.cardId).name;
         case 'to-buying': return 'To Buying';
-        case 'back-to-action': return 'Back to Action (play remaining cards)'; // #2
+        case 'back-to-action': return 'Back to Action'; // #2
         case 'buy-lineup': return 'Buy ' + C(st.lineup[a.slot]).name;
         case 'buy-kick': return 'Buy Kick (3)';
         case 'defeat-sv': return 'Defeat ' + C(a.cardId).name;
@@ -720,7 +724,7 @@
     } else {
       var pk = st.pending ? st.pending.kind : null;
       switch (a.k) {
-        case 'pick': return C(a.id) ? C(a.id).name : 'Card';
+        case 'pick': { var nm = C(a.id) ? C(a.id).name : 'Card'; if ((pk === 'lobo' || pk === 'hv') && a.loc) nm += (a.loc === 'hand' ? ' (Hand)' : ' (Discards)'); return nm; } // lobo/hv: same name can sit in both piles
         case 'dest': return a.id ? ('Destroy ' + C(a.id).name) : 'Destroy';
         case 'take': return a.id ? ('Take ' + C(a.id).name) : 'Take';
         case 'done': return 'Done';
@@ -757,7 +761,8 @@
     hv: 'Heat Vision — destroy one card from your hand or discards.',
     zz: "Zatanna Zatara — put up to two of your discards on the bottom of your deck.",
     bifa: "Brainiac's First Appearance—Attack — choose two cards; they're shuffled and dealt back out.",
-    dsfa: "Deathstroke's First Appearance—Attack — destroy a Hero, Super-Villain, or Equipment.",
+    sinf: "Sinestro's First Appearance—Attack — discard one card for each Hero you revealed.",
+    dsfa: "Deathstroke's First Appearance—Attack — destroy a Hero, Super Power, or Equipment.",
     amfa: "Anti-Monitor's First Appearance—Attack — put one of your cost 1+ cards into the Line-Up.",
     jkfa: "The Joker's First Appearance—Attack — give a card to the player on your left.",
     bmfa: "Black Manta's First Appearance—Attack — destroy the revealed card, or discard your whole hand.",
@@ -1146,6 +1151,14 @@
       var r = document.createElement('div');
       r.className = 'rs-row' + (scores[p.id] === max ? ' win' : '');
       r.innerHTML = '<span>' + escapeHtml(p.name) + '</span><span>' + scores[p.id] + '</span>';
+      // End-game point check: every card the player ended with, pile by pile.
+      r.addEventListener('click', function () { openPileScreen(p.name + ' — All Cards', [
+        { label: 'Deck', ids: p.deck.slice() },
+        { label: 'Hand', ids: p.hand.slice() },
+        { label: 'In Use', ids: (p.id === st.turn.idx) ? st.turn.playedCards.slice() : [] },
+        { label: 'Locations', ids: p.locations.slice() },
+        { label: 'Discards', ids: p.discards.slice() }
+      ]); });
       rows.appendChild(r);
     });
     document.getElementById('resultsOverlay').classList.add('show');
@@ -1228,22 +1241,33 @@
   }
   function closeHeroScreen() { heroScreen.classList.remove('show'); }
 
-  /* ---- #8 Discard options screen: all cards in the clicked player's discard pile ---- */
+  /* ---- Pile browser (#discardScreen): one or more labeled grids of cards.
+   * Used for the destroyed pile and the end-game per-player card review. */
   var discardScreen = document.getElementById('discardScreen');
-  function openDiscardScreen(i) {
+  function openPileScreen(title, sections) { // sections: [{label?, ids}]
     if (!st) return;
-    var p = st.players[i];
-    document.getElementById('dsTitle').textContent = (isMine(i) ? 'Your' : p.name + "'s") + ' Discards (' + p.discards.length + ')';
-    var grid = document.getElementById('dsGrid');
-    grid.innerHTML = '';
-    p.discards.forEach(function (id) {
-      var d = document.createElement('div');
-      d.className = 'ds-card';
-      d.innerHTML = '<img src="' + img(id) + '" alt="">';
-      d.addEventListener('click', function () { peekCard(id); }); // full-size pop-out floats above this screen
-      grid.appendChild(d);
+    document.getElementById('dsTitle').textContent = title;
+    var body = document.getElementById('dsBody');
+    body.innerHTML = '';
+    var any = false;
+    sections.forEach(function (s) {
+      if (s.ids.length) any = true;
+      var sec = document.createElement('div');
+      sec.className = 'ds-sec';
+      if (s.label) { var lb = document.createElement('div'); lb.className = 'ds-sec-label'; lb.textContent = s.label + ' (' + s.ids.length + ')'; sec.appendChild(lb); }
+      var grid = document.createElement('div');
+      grid.className = 'ds-grid';
+      s.ids.forEach(function (id) {
+        var d = document.createElement('div');
+        d.className = 'ds-card';
+        d.innerHTML = '<img src="' + img(id) + '" alt="">';
+        d.addEventListener('click', function () { peekCard(id); }); // full-size pop-out floats above this screen
+        grid.appendChild(d);
+      });
+      sec.appendChild(grid);
+      body.appendChild(sec);
     });
-    if (!p.discards.length) { var e = document.createElement('div'); e.className = 'hs-empty'; e.textContent = 'No cards in this discard pile.'; grid.appendChild(e); }
+    if (!any) { var e = document.createElement('div'); e.className = 'hs-empty'; e.textContent = 'No cards in this pile.'; body.appendChild(e); }
     discardScreen.classList.add('show');
   }
   function closeDiscardScreen() { discardScreen.classList.remove('show'); }
@@ -1282,8 +1306,8 @@
     if (!peek.classList.contains('show') && revealQueue.length) showNextReveal();
   }
 
-  // Player chips: click a Location thumbnail to peek it; click the Discard count for that player's discard options screen (#8);
-  // otherwise (the Super Hero / name) open the hero reference — their Super Hero LEFT + discards smaller RIGHT (#7).
+  // Player chips: click a Location thumbnail to peek it; otherwise (the Super Hero / name)
+  // open the hero reference — their Super Hero LEFT + discards smaller RIGHT (#7).
   document.getElementById('playerStack').addEventListener('click', function (ev) {
     var loc = ev.target.closest ? ev.target.closest('.ploc') : null;
     if (loc && st) { peekCard(loc.getAttribute('data-id')); return; }
@@ -1291,8 +1315,13 @@
     if (!chip || !st) return;
     var i = parseInt(chip.getAttribute('data-i'), 10);
     if (isNaN(i)) return;
-    if (ev.target.closest && ev.target.closest('.disc-link')) { openDiscardScreen(i); return; } // #8: discard pile options screen
     openHeroScreen(i); // #7: their Super Hero LEFT + their discards smaller RIGHT
+  });
+
+  // Destroyed pile: click to see everything that was destroyed this game
+  document.querySelector('.slot.destroyed').addEventListener('click', function () {
+    if (!st) return;
+    openPileScreen('Destroyed (' + st.destroyed.length + ')', [{ ids: st.destroyed.slice() }]);
   });
 
   // Line-Up buys (delegated; covers the 5 slots + any overlapping overflow cards)
