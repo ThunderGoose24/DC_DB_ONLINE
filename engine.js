@@ -91,7 +91,7 @@ var DCENGINE = (function () {
       playedCards: [], // cards "in use" this turn; swept to Discards at end of turn
       _isFirstPlay: false,
       svDefeatedThisTurn: false, kickBoughtThisTurn: false, jonId: null, rasBottom: false,
-      riddlerAvail: false, riddlerUsed: false,
+      riddlerAvail: false, riddlerUsed: false, riddlerPaid: false, // #2: Riddler "+1 instead" pays once even if you go back and forth
       borrowedLineup: [], locFired: {}, pendingQueue: [], _afterDefeat: false,
       boughtGainedThisTurn: [], villainsBoughtGained: 0,
       _spNames: {}, _cybSP: false, _cybEq: false, _glAwarded: false,
@@ -331,8 +331,8 @@ var DCENGINE = (function () {
   function fireAttack(st, attackerIdx, cardId, fa) {
     var q = [];
     if (fa) {
+      q.push(attackerIdx); // prior-SV-defeater is attacked FIRST (#4), then the rest clockwise
       for (var i = 1; i < st.players.length; i++) q.push((attackerIdx + i) % st.players.length);
-      q.push(attackerIdx); // "Each player" includes the defeater, last in order
     } else {
       for (var j = 1; j < st.players.length; j++) q.push((attackerIdx + j) % st.players.length);
     }
@@ -552,6 +552,7 @@ var DCENGINE = (function () {
         out.push({ kind: 'defeat-sv', cardId: top });
       }
       if (st.turn.riddlerAvail && st.turn.power >= 3) out.push({ kind: 'riddler-use' });
+      if (p.hand.length) out.push({ kind: 'back-to-action' }); // #2: go back and play leftover hand cards
       out.push({ kind: 'end-buying' });
     }
     return out;
@@ -600,9 +601,12 @@ var DCENGINE = (function () {
     switch (a.kind) {
       case 'play': playCard(st, p, a.cardId); break;
       case 'to-buying':
-        // Riddler: unused ability pays out +1 Power instead
-        if (st.turn.riddlerAvail && !st.turn.riddlerUsed) addPower(st, p, 1);
+        // Riddler: unused ability pays out +1 Power instead (once — #2's go-back must not re-pay)
+        if (st.turn.riddlerAvail && !st.turn.riddlerUsed && !st.turn.riddlerPaid) { addPower(st, p, 1); st.turn.riddlerPaid = true; }
         st.turn.phase = 'buying';
+        break;
+      case 'back-to-action': // #2: return to the Action phase to play leftover hand cards
+        st.turn.phase = 'action';
         break;
       case 'buy-lineup': {
         var id = st.lineup[a.slot];
@@ -631,6 +635,7 @@ var DCENGINE = (function () {
         // Defeating acquires the SV (into your Discards) — its top effect now
         // fires when you PLAY it. Reveal the next Super Villain right away.
         p.discards.push(sv);
+        st.turn.villainsBoughtGained++; // defeating acquires a Villain -> Wonder Woman's end-of-turn draw (#6)
         log(st, p.name + ' defeats ' + C(sv).name + '.');
         if (sv === 'captain-cold') { // Personas flip back up
           st.players.forEach(function (o) { o.faceDown = false; });

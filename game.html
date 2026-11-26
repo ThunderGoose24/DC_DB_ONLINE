@@ -218,6 +218,37 @@
   .pk-btn:hover { filter:brightness(1.3); }
   .pk-btn.primary { background:linear-gradient(180deg, rgba(164,22,34,0.97), rgba(110,15,25,0.97)); border-color:rgba(255,120,130,0.5); }
 
+  /* #7 Super Hero reference screen — the clicked player's Super Hero LEFT + their discard cards smaller RIGHT */
+  #heroScreen { position:fixed; inset:0; z-index:19; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,.8); }
+  #heroScreen.show { display:flex; }
+  .hs-panel { position:relative; width:960px; max-width:94vw; max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:1.4rem; box-shadow:0 18px 60px rgba(0,0,0,.7); }
+  .hs-title { font-size:1.05rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#fff; margin-bottom:1.1rem; display:flex; align-items:center; gap:.6rem; }
+  .hs-hero { width:42px; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,.6); flex:none; }
+  .hs-x { position:absolute; top:14px; right:18px; z-index:2; width:34px; height:34px; border-radius:50%; font-size:1.4rem; line-height:1; color:#fff; background:rgba(4,6,12,.7); border:1px solid rgba(255,255,255,.3); cursor:pointer; }
+  .hs-body { display:flex; gap:1.8rem; align-items:flex-start; }
+  .hs-col-label { font-size:.8rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.6); margin-bottom:.7rem; }
+  .hs-left { flex:none; width:320px; }
+  .hs-sv { aspect-ratio:2.5/3.5; width:100%; position:relative; margin:0; }
+  .hs-sv img { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 6px 24px rgba(0,0,0,.8)); pointer-events:none; }
+  .hs-empty { color:rgba(255,255,255,.5); font-style:italic; padding-top:.4rem; }
+  .hs-right { flex:1; max-height:64vh; overflow-y:auto; }
+  .hs-discards { display:flex; flex-wrap:wrap; gap:.7rem; }
+  .hs-discard { width:120px; aspect-ratio:2.5/3.5; border-radius:6px; cursor:pointer; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.14); }
+  .hs-discard img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+
+  /* #8 Discard options screen — all cards in the clicked player's discard pile */
+  #discardScreen { position:fixed; inset:0; z-index:19; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,.8); }
+  #discardScreen.show { display:flex; }
+  .ds-panel { position:relative; width:760px; max-width:94vw; max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:1.4rem; box-shadow:0 18px 60px rgba(0,0,0,.7); }
+  .ds-title { font-size:1.05rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#fff; margin-bottom:1.1rem; }
+  .ds-x { position:absolute; top:14px; right:18px; z-index:2; width:34px; height:34px; border-radius:50%; font-size:1.4rem; line-height:1; color:#fff; background:rgba(4,6,12,.7); border:1px solid rgba(255,255,255,.3); cursor:pointer; }
+  .ds-grid { display:flex; flex-wrap:wrap; gap:.8rem; }
+  .ds-card { width:150px; aspect-ratio:2.5/3.5; border-radius:6px; cursor:pointer; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.14); }
+  .ds-card img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
+
+  /* #8 Discard count link in the player chip sub-line */
+  .disc-link { text-decoration:underline; cursor:pointer; color:#9fd3ff; }
+
   /* Choice modal (defense / pending) */
   #choiceModal { position:fixed; inset:0; z-index:8; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.55); }
   #choiceModal.show { display:flex; }
@@ -342,6 +373,29 @@
   </div></div>
 
   <div id="peek"><button type="button" class="peek-x" id="peekX">&times;</button><figure class="peek-card"><img id="peekImg" alt=""><figcaption id="peekName"></figcaption></figure><div class="peek-actions" id="peekActions"></div></div>
+
+  <!-- #7 Super Hero reference: the clicked player's Super Hero LEFT + their discard cards smaller RIGHT -->
+  <div id="heroScreen"><div class="hs-panel">
+    <button type="button" class="hs-x" id="hsX">&times;</button>
+    <div class="hs-title"><img class="hs-hero" id="hsHeroImg" alt=""><span id="hsTitle"></span></div>
+    <div class="hs-body">
+      <div class="hs-left">
+        <div class="hs-col-label">Super Hero</div>
+        <figure class="hs-sv"><img id="hsSvImg" alt=""></figure>
+      </div>
+      <div class="hs-right">
+        <div class="hs-col-label" id="hsDiscardLabel">Discards</div>
+        <div class="hs-discards" id="hsDiscards"></div>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- #8 Discard options screen: all cards in the clicked player's discard pile -->
+  <div id="discardScreen"><div class="ds-panel">
+    <button type="button" class="ds-x" id="dsX">&times;</button>
+    <div class="ds-title" id="dsTitle"></div>
+    <div class="ds-grid" id="dsGrid"></div>
+  </div></div>
 
   <!-- Persona pre-game -->
   <div id="personaOverlay"><div class="po-panel">
@@ -518,7 +572,7 @@
       c.setAttribute('data-i', i);
       // Power is turn-based (st.turn.power), so only the active player shows it — up next to their name.
       var nameLine = p.name + (cur ? ' - P' + st.turn.power : '');
-      var sub = 'Deck ' + p.deck.length + ' · Hand ' + p.hand.length + ' · Discard ' + p.discards.length;
+      var sub = 'Deck ' + p.deck.length + ' · Hand ' + p.hand.length + ' · <span class="disc-link">Discard ' + p.discards.length + '</span>'; // #8: clickable -> discard options screen
       c.innerHTML = '<img class="chip-hero" src="' + img(p.personaId) + '" alt="">' +
         '<span class="chip-txt"><span>' + nameLine + '</span><span class="sub">' + sub + '</span></span>';
       // Played Locations: hug the right edge of this player's chip (click to peek)
@@ -654,6 +708,7 @@
       switch (a.kind) {
         case 'play': return 'Play ' + C(a.cardId).name;
         case 'to-buying': return 'To Buying';
+        case 'back-to-action': return 'Back to Action (play remaining cards)'; // #2
         case 'buy-lineup': return 'Buy ' + C(st.lineup[a.slot]).name;
         case 'buy-kick': return 'Buy Kick (3)';
         case 'defeat-sv': return 'Defeat ' + C(a.cardId).name;
@@ -780,9 +835,9 @@
         });
         rows = [];
         if (handActs.length && discActs.length) rows.push({ label: 'Hand' });
-        handActs.forEach(function (a) { rows.push({ act: a }); });
+        handActs.forEach(function (a) { var c = { k: a.k, id: a.id }; c.loc = 'hand'; rows.push({ act: c }); }); // #3: tag the pile so removal targets it
         if (handActs.length && discActs.length) rows.push({ label: 'Discard' });
-        discActs.forEach(function (a) { rows.push({ act: a }); });
+        discActs.forEach(function (a) { var c = { k: a.k, id: a.id }; c.loc = 'discards'; rows.push({ act: c }); });
         restActs.forEach(function (a) { rows.push({ act: a }); });
       }
       rows.forEach(function (r) {
@@ -828,7 +883,7 @@
       return;
     }
     // No "Buy Kick" button — the kick pile is bought by clicking it. Defeating an SV goes through its button here.
-    var acts = DCENGINE.actions(st).filter(function (a) { return a.kind === 'defeat-sv' || a.kind === 'riddler-use' || a.kind === 'end-buying'; });
+    var acts = DCENGINE.actions(st).filter(function (a) { return a.kind === 'defeat-sv' || a.kind === 'riddler-use' || a.kind === 'back-to-action' || a.kind === 'end-buying'; }); // #2: go-back button in Buying
     btns.innerHTML = '';
     acts.forEach(function (a) {
       var b = document.createElement('button');
@@ -1149,6 +1204,50 @@
     pa.classList.add('show');
   }
 
+  /* ---- #7 Super Hero reference screen: the clicked player's Super Hero LEFT + their discards smaller RIGHT ---- */
+  var heroScreen = document.getElementById('heroScreen');
+  function openHeroScreen(i) {
+    if (!st) return;
+    var p = st.players[i];
+    document.getElementById('hsTitle').textContent = C(p.personaId).name; // the hero card you clicked
+    document.getElementById('hsDiscardLabel').textContent = (isMine(i) ? 'Your' : p.name + "'s") + ' Discards';
+    document.getElementById('hsHeroImg').src = img(p.personaId);
+    // The big pop-out is the clicked player's own Super Hero (not the SV stack).
+    document.getElementById('hsSvImg').src = img(p.personaId);
+    var box = document.getElementById('hsDiscards');
+    box.innerHTML = '';
+    p.discards.forEach(function (id) {
+      var d = document.createElement('div');
+      d.className = 'hs-discard';
+      d.innerHTML = '<img src="' + img(id) + '" alt="">';
+      d.addEventListener('click', function () { peekCard(id); }); // full-size pop-out floats above this screen
+      box.appendChild(d);
+    });
+    if (!p.discards.length) { var e = document.createElement('div'); e.className = 'hs-empty'; e.textContent = 'No cards in this discard pile.'; box.appendChild(e); }
+    heroScreen.classList.add('show');
+  }
+  function closeHeroScreen() { heroScreen.classList.remove('show'); }
+
+  /* ---- #8 Discard options screen: all cards in the clicked player's discard pile ---- */
+  var discardScreen = document.getElementById('discardScreen');
+  function openDiscardScreen(i) {
+    if (!st) return;
+    var p = st.players[i];
+    document.getElementById('dsTitle').textContent = (isMine(i) ? 'Your' : p.name + "'s") + ' Discards (' + p.discards.length + ')';
+    var grid = document.getElementById('dsGrid');
+    grid.innerHTML = '';
+    p.discards.forEach(function (id) {
+      var d = document.createElement('div');
+      d.className = 'ds-card';
+      d.innerHTML = '<img src="' + img(id) + '" alt="">';
+      d.addEventListener('click', function () { peekCard(id); }); // full-size pop-out floats above this screen
+      grid.appendChild(d);
+    });
+    if (!p.discards.length) { var e = document.createElement('div'); e.className = 'hs-empty'; e.textContent = 'No cards in this discard pile.'; grid.appendChild(e); }
+    discardScreen.classList.add('show');
+  }
+  function closeDiscardScreen() { discardScreen.classList.remove('show'); }
+
   /* ---- effect reveals: pop out each revealed card for 10s or until clicked off ---- */
   var revealQueue = [];      // ids waiting to be shown (in order)
   var revealedShown = 0;     // how many st.reveals entries have already been enqueued
@@ -1167,6 +1266,11 @@
   }
   document.getElementById('peekX').addEventListener('click', closePeek);
   peek.addEventListener('click', function (ev) { if (ev.target === peek) closePeek(); });
+  // #7/#8 reference screens: X or backdrop click closes them (a card peek opens above and stays after it closes)
+  document.getElementById('hsX').addEventListener('click', closeHeroScreen);
+  heroScreen.addEventListener('click', function (ev) { if (ev.target === heroScreen) closeHeroScreen(); });
+  document.getElementById('dsX').addEventListener('click', closeDiscardScreen);
+  discardScreen.addEventListener('click', function (ev) { if (ev.target === discardScreen) closeDiscardScreen(); });
 
   /* Feed new reveals from state into the popup queue. Called every render(). */
   function pumpReveals() {
@@ -1178,7 +1282,8 @@
     if (!peek.classList.contains('show') && revealQueue.length) showNextReveal();
   }
 
-  // Player chips: click a name to peek their Super Hero; click a Location thumbnail to peek it.
+  // Player chips: click a Location thumbnail to peek it; click the Discard count for that player's discard options screen (#8);
+  // otherwise (the Super Hero / name) open the hero reference — their Super Hero LEFT + discards smaller RIGHT (#7).
   document.getElementById('playerStack').addEventListener('click', function (ev) {
     var loc = ev.target.closest ? ev.target.closest('.ploc') : null;
     if (loc && st) { peekCard(loc.getAttribute('data-id')); return; }
@@ -1186,7 +1291,8 @@
     if (!chip || !st) return;
     var i = parseInt(chip.getAttribute('data-i'), 10);
     if (isNaN(i)) return;
-    peekCard(st.players[i].personaId, st.players[i].name);
+    if (ev.target.closest && ev.target.closest('.disc-link')) { openDiscardScreen(i); return; } // #8: discard pile options screen
+    openHeroScreen(i); // #7: their Super Hero LEFT + their discards smaller RIGHT
   });
 
   // Line-Up buys (delegated; covers the 5 slots + any overlapping overflow cards)

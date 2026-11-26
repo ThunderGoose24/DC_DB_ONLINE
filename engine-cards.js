@@ -31,6 +31,14 @@
     if (i >= 0) p.discards.splice(i, 1);
   }
 
+  /* Remove from a SPECIFIC pile (hand or discards). "Your discards" and hand-or-discard
+   * pickers use this so a discard pick can't grab the hand copy (#3). */
+  function removeFromLoc(p, id, loc) {
+    var arr = (loc === 'hand') ? p.hand : p.discards;
+    var i = arr.indexOf(id);
+    if (i >= 0) arr.splice(i, 1);
+  }
+
   /* One pick action per unpicked INSTANCE — duplicate IDs in the pool
    * stay individually pickable (count-based, not membership). */
   function unpickedActs(cands, picked) {
@@ -109,7 +117,7 @@
     p.locations.forEach(function (loc) {
       var ok = false;
       switch (loc) {
-        case 'arkham-asylum': ok = (ty === 'villain'); break;
+        case 'arkham-asylum': ok = (ty === 'villain' || ty === 'sv'); break; // SVs play as Villains (#1)
         case 'fortress-of-solitude': ok = (ty === 'superpower'); break;
         case 'the-batcave': ok = (ty === 'equipment'); break;
         case 'the-watchtower': ok = (ty === 'hero'); break;
@@ -428,7 +436,7 @@
     },
     'darkseid': function (st, p) { // discard two unless a Villain is revealed
       var vIdx = -1;
-      for (var i = 0; i < p.hand.length; i++) if (typeOf(p.hand[i]) === 'villain') { vIdx = i; break; }
+      for (var i = 0; i < p.hand.length; i++) if (typeOf(p.hand[i]) === 'villain' || typeOf(p.hand[i]) === 'sv') { vIdx = i; break; } // SVs count as Villains (#1)
       if (vIdx >= 0) { log(st, p.name + " reveals a Villain and keeps their hand."); return; }
       var n = Math.min(2, p.hand.length);
       for (var k = 0; k < n; k++) p.discards.push(p.hand.splice(randIdx(st, p.hand.length), 1)[0]);
@@ -644,7 +652,7 @@
         break;
 
       case 'tohand': // Bat-Signal / Robin: pick one from Discards
-        removeWhere(p, a.id);
+        removeFromLoc(p, a.id, 'discards');
         p.hand.push(a.id);
         log(st, C(a.id).name + " goes into " + p.name + "'s hand.");
         break;
@@ -652,7 +660,7 @@
       case 'koa': // King of Atlantis: destroy or keep (+3 / +1 deferred)
         if (a.k === 'dest') {
           st.turn._koa = true;
-          removeWhere(p, a.id);
+          removeFromLoc(p, a.id, 'discards');
           st.destroyed.push(a.id);
           log(st, C(a.id).name + " is destroyed.");
         }
@@ -703,20 +711,20 @@
       /* ---- stateful pickers (pick / done) ---- */
       case 'lobo': // destroy up to two from hand+discards (options stay stable via snapshot pool)
         if (a.k === 'done') break;
-        removeWhere(p, a.id); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
+        removeFromLoc(p, a.id, a.loc); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
         pend.picked.push(a.id);
         if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, pend.pool); }
         break;
 
       case 'hv': // Heat Vision: destroy one from hand+discards
         if (a.k === 'done') break;
-        removeWhere(p, a.id); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
+        removeFromLoc(p, a.id, a.loc); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
         pend.picked.push(a.id);
         break;
 
       case 'zz': // Zatanna: up to two from discards -> bottom of deck (options stay stable via snapshot pool)
         if (a.k === 'done') break;
-        removeWhere(p, a.id); p.deck.unshift(a.id); log(st, C(a.id).name + " goes on the bottom of " + p.name + "'s deck.");
+        removeFromLoc(p, a.id, 'discards'); p.deck.unshift(a.id); log(st, C(a.id).name + " goes on the bottom of " + p.name + "'s deck.");
         pend.picked.push(a.id);
         if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, pend.pool); }
         break;
@@ -823,7 +831,7 @@
 
       case 'bp': // Bulletproof: may destroy a discard after defending
         if (a.k === 'done') break;
-        removeWhere(p, a.id); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
+        removeFromLoc(p, a.id, 'discards'); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
         pend.picked.push(a.id);
         break;
 
@@ -834,7 +842,7 @@
 
       case 'at': // Atrocitus: destroy up to two from discards (options stay stable via snapshot pool)
         if (a.k === 'done') break;
-        removeWhere(p, a.id); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
+        removeFromLoc(p, a.id, 'discards'); st.destroyed.push(a.id); log(st, C(a.id).name + " is destroyed.");
         pend.picked.push(a.id);
         if (pend.picked.length < pend.max) { keepPending = true; pend.actions = pickActs(pend, pend.pool); }
         break;
