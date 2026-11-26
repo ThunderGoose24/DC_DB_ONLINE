@@ -1240,6 +1240,36 @@
   /* ---- Pile browser (#discardScreen): one or more labeled grids of cards.
    * Used for the destroyed pile and the end-game per-player card review. */
   var discardScreen = document.getElementById('discardScreen');
+  /* Fit the whole review on screen (no scrolling) at any zoom: shrink cards so every row + label fits in the panel's 88vh cap. Small piles keep their normal size; only large ones shrink. */
+  function fitReview(bodyEl) {
+    var panel = document.querySelector('.ds-panel');
+    if (!panel) return;
+    var cards = bodyEl.querySelectorAll('.ds-card');
+    var N = cards.length;
+    if (!N) return;
+    var cs = getComputedStyle(panel);
+    var padT = parseFloat(cs.paddingTop), padB = parseFloat(cs.paddingBottom);
+    var capH = window.innerHeight * 0.88; // panel max-height:88vh
+    var availW = panel.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var chromeH = 0, tEl = document.getElementById('dsTitle'); // dsX is absolute -> takes no flow space
+    if (tEl) { chromeH += tEl.offsetHeight + (parseFloat(getComputedStyle(tEl).marginBottom) || 0); }
+    bodyEl.querySelectorAll('.ds-sec').forEach(function (s) { chromeH += parseFloat(getComputedStyle(s).marginBottom) || 0; });
+    bodyEl.querySelectorAll('.ds-sec-label').forEach(function (lb) { chromeH += lb.offsetHeight + (parseFloat(getComputedStyle(lb).marginBottom) || 0); });
+    var availH = capH - padT - padB - chromeH - 8; // small buffer so we never overflow
+    if (availH < 60) return; // too short to be useful -> keep default size + scroll fallback
+    var gap = 12.8; // .ds-grid gap:.8rem
+    var cols = Math.floor((availW + gap) / (40 + gap)); // min card ~40px wide
+    if (cols < 2) cols = 2; else if (cols > 6) cols = 6;
+    var sumRows = 0, numSecs = 0; // cards are split across section grids; each wraps independently
+    bodyEl.querySelectorAll('.ds-grid').forEach(function (g) { if (g.children.length) { numSecs++; sumRows += Math.ceil(g.children.length / cols); } });
+    var Hmax = (availH - gap * (sumRows - numSecs)) / sumRows; // height per card so every row in every section fits
+    var wByHeight = Hmax * (2.5 / 3.5);           // aspect-ratio 2.5/3.5 -> width from height
+    var wByWidth = (availW - (cols - 1) * gap) / cols; // width so `cols` fit horizontally
+    var w = Math.min(wByHeight, wByWidth, 104);   // never larger than the normal size
+    if (w < 26) w = 26;                           // keep at least tappable-ish
+    cards.forEach(function (c) { c.style.width = w + 'px'; });
+  }
+
   function openPileScreen(title, sections) { // sections: [{label?, ids}]
     if (!st) return;
     document.getElementById('dsTitle').textContent = title;
@@ -1265,8 +1295,8 @@
     });
     if (!any) { var e = document.createElement('div'); e.className = 'hs-empty'; e.textContent = 'No cards in this pile.'; body.appendChild(e); }
     discardScreen.classList.add('show');
-    var panel = document.querySelector('.ds-panel'); // always start at the TOP so no card is cut off (#review)
-    if (panel) panel.scrollTop = 0;
+    fitReview(body); // size every card so the whole review fits on screen, no scrolling (#review)
+    var panel = document.querySelector('.ds-panel'); if (panel) panel.scrollTop = 0; // start at top
   }
   function closeDiscardScreen() { discardScreen.classList.remove('show'); }
 
