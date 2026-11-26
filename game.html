@@ -827,22 +827,18 @@
       // "Hand or discard" destroy picks (Heat Vision / Lobo): show Hand first, then Discard — same menu, scroll down for the rest.
       var rows = acts.map(function (a) { return { act: a }; });
       if (st.pending && (st.pending.kind === 'hv' || st.pending.kind === 'lobo')) {
-        var op = st.players[decisionOwner(st)];
-        var hAvail = {}, dAvail = {};
-        op.hand.forEach(function (id) { hAvail[id] = (hAvail[id] || 0) + 1; });
-        op.discards.forEach(function (id) { dAvail[id] = (dAvail[id] || 0) + 1; });
         var handActs = [], discActs = [], restActs = [];
         acts.forEach(function (a) {
           if (!a.id) { restActs.push(a); return; } // e.g. Done
-          if ((hAvail[a.id] || 0) > 0) { hAvail[a.id]--; handActs.push(a); }
-          else if ((dAvail[a.id] || 0) > 0) { dAvail[a.id]--; discActs.push(a); }
+          if (a.loc === 'hand') handActs.push(a); // actions carry their own pile: n + loc from the engine pool
+          else if (a.loc === 'discards') discActs.push(a);
           else restActs.push(a);
         });
         rows = [];
         if (handActs.length && discActs.length) rows.push({ label: 'Hand' });
-        handActs.forEach(function (a) { var c = { k: a.k, id: a.id }; c.loc = 'hand'; rows.push({ act: c }); }); // #3: tag the pile so removal targets it
+        handActs.forEach(function (a) { rows.push({ act: a }); }); // pass the engine action through untouched — n + loc stay intact so removal targets the right pile (#3)
         if (handActs.length && discActs.length) rows.push({ label: 'Discard' });
-        discActs.forEach(function (a) { var c = { k: a.k, id: a.id }; c.loc = 'discards'; rows.push({ act: c }); });
+        discActs.forEach(function (a) { rows.push({ act: a }); });
         restActs.forEach(function (a) { rows.push({ act: a }); });
       }
       rows.forEach(function (r) {
