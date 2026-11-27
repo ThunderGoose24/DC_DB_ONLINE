@@ -239,17 +239,19 @@
   /* #8 Discard options screen — all cards in the clicked player's discard pile */
   #discardScreen { position:fixed; inset:0; z-index:19; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,.8); }
   #discardScreen.show { display:flex; }
-  .ds-panel { position:relative; width:760px; max-width:94vw; box-sizing:border-box; max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:1.4rem; box-shadow:0 18px 60px rgba(0,0,0,.7); }
-  .ds-title { font-size:1.05rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#fff; margin-bottom:1.1rem; }
+  /* Full-screen pile browser (end-game "All Cards" review / destroyed pile): fills the whole
+     viewport and scrolls, so no card is ever cut off on any screen size or zoom level. */
+  .ds-panel { position:absolute; inset:0; box-sizing:border-box; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); padding:2rem 1.5rem; }
+  .ds-title { font-size:1.6rem; font-weight:900; letter-spacing:.04em; text-transform:uppercase; color:#fff; margin-bottom:1.2rem; }
   .ds-x { position:absolute; top:14px; right:18px; z-index:2; width:34px; height:34px; border-radius:50%; font-size:1.4rem; line-height:1; color:#fff; background:rgba(4,6,12,.7); border:1px solid rgba(255,255,255,.3); cursor:pointer; }
-  .ds-grid { display:flex; flex-wrap:wrap; gap:.8rem; }
-  .ds-card { width:104px; aspect-ratio:2.5/3.5; border-radius:6px; cursor:pointer; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.14); }
+  .ds-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.8rem; }
+  .ds-card { width:auto; aspect-ratio:2.5/3.5; border-radius:6px; cursor:pointer; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.14); }
   .ds-card img { width:100%; height:100%; object-fit:contain; pointer-events:none; }
 
   /* Pile browser sections (destroyed pile / end-game card review) */
   .slot.destroyed { cursor:pointer; }
   .ds-sec { margin-bottom:1.2rem; }
-  .ds-sec-label { font-size:.8rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.6); margin-bottom:.7rem; }
+  .ds-sec-label { font-size:.95rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.6); margin-bottom:.7rem; }
 
   /* Choice modal (defense / pending) */
   #choiceModal { position:fixed; inset:0; z-index:8; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,0.55); }
@@ -395,10 +397,9 @@
 
   <!-- Pile browser: destroyed pile + end-game per-player card review -->
   <div id="discardScreen"><div class="ds-panel">
-    <button type="button" class="ds-x" id="dsX">&times;</button>
     <div class="ds-title" id="dsTitle"></div>
     <div id="dsBody"></div>
-  </div></div>
+  </div><button type="button" class="ds-x" id="dsX">&times;</button></div>
 
   <!-- Persona pre-game -->
   <div id="personaOverlay"><div class="po-panel">
@@ -1071,7 +1072,7 @@
 
   function syncSeatsFromRoster() {
     var players = rosterPlayers();
-    return players.map(function (p) { return { name: p.name, kind: p.kind }; });
+    return players.map(function (p) { return { name: p.name, kind: p.kind, aiLevel: p.aiLevel }; }); // aiLevel: per-AI roll from the lobby Random pill
   }
   // Online entry point (called from the boot dispatch). Waits for the Trystero module to load.
   function onlineInit() {
@@ -1117,7 +1118,8 @@
     // AI step
     var acts = DCENGINE.actions(st);
     if (!acts.length) return;
-    var lvl = aiLevel;
+    // Per-AI level: a Random-rolled seat plays its own level; otherwise the global setting.
+    var lvl = ({ Easy: 'easy', Medium: 'medium', Hard: 'hard' })[(seats[owner] && seats[owner].aiLevel) || settings.difficulty] || 'medium';
     var act = AI.choose(st, lvl);
     if (!act) return;
     applyAction(act);

@@ -478,12 +478,19 @@ var DCENGINE = (function () {
       log(st, p.name + "'s Super Hero draws " + st.turn.villainsBoughtGained + ' extra card' + (st.turn.villainsBoughtGained > 1 ? 's' : '') + '.');
     }
 
+    // End-of-turn card effects (e.g. Aquaman's Trident). Runs while this turn's
+    // playedIds / boughtGainedThisTurn are still intact, and BEFORE the new hand is
+    // drawn — so a chosen bought/gained card can go on top of the deck and be drawn
+    // back into the hand this same turn.
+    if (DCENGINE.hooks.endOfTurn) DCENGINE.hooks.endOfTurn(st, p);
+    if (st.pending) { st.turn._finishingTurn = true; return; } // choice pending: finishCleanUp after it resolves
+    finishCleanUp(st);
+  }
+
+  function finishCleanUp(st) {
+    var p = st.players[st.turn.idx];
     drawCards(st, p, 5);
     refillLineup(st);
-
-    // End-of-turn card effects (e.g. Aquaman's Trident). Runs while this turn's
-    // playedIds / boughtGainedThisTurn are still intact, before the next turn starts.
-    if (DCENGINE.hooks.endOfTurn) DCENGINE.hooks.endOfTurn(st, p);
 
     // reset per-turn state
     st.turn = freshTurn((st.turn.idx + 1) % st.players.length);
@@ -604,6 +611,7 @@ var DCENGINE = (function () {
       if (!st.pending && t2.pendingQueue.length) st.pending = t2.pendingQueue.shift(); // pump next queued choice
       if (!st.pending && t2._afterDefeat) { t2._afterDefeat = false; revealNext(st); }
       if (!st.pending && st.attackQueue && st.attackQueue.awaiting) { st.attackQueue.awaiting = false; advanceTarget(st); }
+      if (!st.pending && !st.over && t2._finishingTurn) finishCleanUp(st); // end-of-turn choice resolved: draw the new hand now
       return st;
     }
     if (st.attackQueue) { resolveTarget(st, a); return st; }

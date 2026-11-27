@@ -211,6 +211,7 @@
           <button class="pill" type="button" data-diff="Easy">Easy</button>
           <button class="pill active" type="button" data-diff="Medium">Medium</button>
           <button class="pill" type="button" data-diff="Hard">Hard</button>
+          <button class="pill" type="button" data-diff="Random">Random</button>
         </div>
       </div>
       <button class="panel-done" type="button" id="doneBtn">Done</button>
@@ -276,7 +277,7 @@
       var d = document.createElement('div');
       d.className = 'slot' + ((i === mySeat) ? ' me' : '');
       var tagCls = p.kind === 'you' ? 'you' : (p.kind === 'ai' ? 'cpu' : 'human');
-      var tagTxt = p.kind === 'you' ? 'You' : (p.kind === 'ai' ? currentDiff() : 'Player');
+      var tagTxt = p.kind === 'you' ? 'You' : (p.kind === 'ai' ? (p.aiLevel || currentDiff()) : 'Player'); // Random AIs show the level they rolled
       var stat;
       if (p.kind === 'ai') stat = '';
       else stat = p.personaId ? ('★ ' + pName(p.personaId)) : (p.random ? 'Random' : 'choosing…'); // Random stays hidden until in-game
@@ -498,28 +499,29 @@
 
   // Save the live roster to this tab's sessionStorage so game.html (a fresh page load) can read it back.
   // Trystero state is peer-to-peer and dies when every holder navigates away, so we carry picks across.
-  function persistRoster() {
-    try { var ps = rosterState && rosterState.get(); if (ps && ps.players) sessionStorage.setItem('__dc_roster_' + roomId, JSON.stringify(ps)); } catch (e) {}
+  function persistRoster(state) {
+    try { var ps = state || (rosterState && rosterState.get()); if (ps && ps.players) sessionStorage.setItem('__dc_roster_' + roomId, JSON.stringify(ps)); } catch (e) {}
   }
 
   // ---- Start (host only): tell everyone to go, then move ourselves -------
   startBtn.addEventListener('click', function () {
     if (startBtn.disabled) return;
     try { localStorage.setItem('dc_settings', JSON.stringify({ difficulty: currentDiff(), refill: document.getElementById('refillToggle').checked })); } catch (e) {}
-    // Resolve hidden "Random" picks NOW: the host rolls distinct heroes for those seats, so every
-    // client's game page sees final picks. AI seats stay null — game.html rolls them at boot.
-    rosterState.set(function (cur) {
-      var players = cur.players.slice();
-      if (!players.some(function (p) { return !!p.random; })) return { players: players, banned: (cur.banned || []) };
+    // Resolve hidden "Random" picks NOW — synchronously — so the exact final roster is both written to
+    // Trystero and persisted for game.html in one step. No gap between the roll and what gets saved,
+    // so every client's game page sees the same final picks (AI seats stay null; game.html rolls them).
+    var curRoster = rosterState.get();
+    var finalPlayers = (curRoster && curRoster.players) ? curRoster.players.slice() : [];
+    if (finalPlayers.some(function (p) { return !!p.random; })) {
       var used = {};
-      players.forEach(function (p) { if (p.personaId && !p.random) used[p.personaId] = true; });
+      finalPlayers.forEach(function (p) { if (p.personaId && !p.random) used[p.personaId] = true; });
       var pool = PERSONAS.filter(function (id) { return !used[id]; });
       for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
       var k = 0;
-      players.forEach(function (p) { if (p.random) { p.personaId = pool[k++]; p.random = false; } });
-      return { players: players, banned: (cur.banned || []) };
-    });
-    persistRoster();
+      finalPlayers.forEach(function (p) { if (p.random) { p.personaId = pool[k++]; p.random = false; } });
+    }
+    rosterState.set({ players: finalPlayers, banned: (curRoster && curRoster.banned) || [] });
+    persistRoster({ players: finalPlayers, banned: (curRoster && curRoster.banned) || [] }); // exact final picks — no re-read race
     beginAction.send({}).catch(function () {});
     location.href = 'game.html?role=host&room=' + encodeURIComponent(roomId);
   });
@@ -529,7 +531,9 @@
     var cur = rosterState.get();
     var players = cur.players.slice();
     if (players.length >= 4) return;
-    players.push({ userId: null, name: 'AI', kind: 'ai', personaId: null });
+    // Random: each AI rolls its own difficulty when it is added (stored on the seat so every client agrees).
+    var lvl = currentDiff() === 'Random' ? ['Easy', 'Medium', 'Hard'][Math.floor(Math.random() * 3)] : null;
+    players.push({ userId: null, name: 'AI', kind: 'ai', personaId: null, aiLevel: lvl });
     rosterState.set({ players: players, banned: (cur.banned || []) });
   });
 
