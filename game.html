@@ -239,7 +239,7 @@
   /* #8 Discard options screen — all cards in the clicked player's discard pile */
   #discardScreen { position:fixed; inset:0; z-index:19; display:none; align-items:center; justify-content:center; background:rgba(3,5,10,.8); }
   #discardScreen.show { display:flex; }
-  .ds-panel { position:relative; width:760px; max-width:94vw; max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:1.4rem; box-shadow:0 18px 60px rgba(0,0,0,.7); }
+  .ds-panel { position:relative; width:760px; max-width:94vw; box-sizing:border-box; max-height:88vh; overflow-y:auto; background:linear-gradient(180deg,#141a2b,#0c101d); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:1.4rem; box-shadow:0 18px 60px rgba(0,0,0,.7); }
   .ds-title { font-size:1.05rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#fff; margin-bottom:1.1rem; }
   .ds-x { position:absolute; top:14px; right:18px; z-index:2; width:34px; height:34px; border-radius:50%; font-size:1.4rem; line-height:1; color:#fff; background:rgba(4,6,12,.7); border:1px solid rgba(255,255,255,.3); cursor:pointer; }
   .ds-grid { display:flex; flex-wrap:wrap; gap:.8rem; }
@@ -717,6 +717,7 @@
         case 'buy-kick': return 'Buy Kick (3)';
         case 'defeat-sv': return 'Defeat ' + C(a.cardId).name;
         case 'riddler-use': return 'Use Riddler (3)';
+        case 'riddler-plus': return '+1 Power instead';
         case 'end-buying': return 'End Turn';
         case 'succumb': return 'Succumb';
         case 'defend': return 'Defend: ' + C(a.cardId).name;
@@ -884,7 +885,7 @@
       return;
     }
     // No "Buy Kick" button — the kick pile is bought by clicking it. Defeating an SV goes through its button here.
-    var acts = DCENGINE.actions(st).filter(function (a) { return a.kind === 'defeat-sv' || a.kind === 'riddler-use' || a.kind === 'back-to-action' || a.kind === 'end-buying'; }); // #2: go-back button in Buying
+    var acts = DCENGINE.actions(st).filter(function (a) { return a.kind === 'defeat-sv' || a.kind === 'riddler-use' || a.kind === 'riddler-plus' || a.kind === 'back-to-action' || a.kind === 'end-buying'; }); // #2: go-back button in Buying
     btns.innerHTML = '';
     acts.forEach(function (a) {
       var b = document.createElement('button');

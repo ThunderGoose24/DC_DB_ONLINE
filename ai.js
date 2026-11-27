@@ -109,7 +109,7 @@ var AI = (function () {
   }
 
   function mediumBuying(acts, st) {
-    var defeat = null, bestBuy = null, kick = null, riddler = null, endb = null;
+    var defeat = null, bestBuy = null, kick = null, riddler = null, plus = null, endb = null;
     for (var i = 0; i < acts.length; i++) {
       var a = acts[i];
       if (a.kind === 'defeat-sv') defeat = a;
@@ -123,11 +123,13 @@ var AI = (function () {
         }
       } else if (a.kind === 'buy-kick') kick = a;
       else if (a.kind === 'riddler-use') riddler = a;
+      else if (a.kind === 'riddler-plus') plus = a;
       else endb = a;
     }
     if (defeat) return defeat; // biggest swing + advances the game
     if (bestBuy) return bestBuy;
     if (riddler) return riddler;
+    if (plus) return plus; // +1 Power instead — free power to spend this turn
     if (kick) return kick;
     return endb || acts[0];
   }
@@ -138,7 +140,7 @@ var AI = (function () {
     var cands = [], i;
     for (i = 0; i < acts.length; i++) {
       var k = acts[i].kind;
-      if (k === 'defeat-sv' || k === 'buy-lineup' || k === 'riddler-use' || k === 'buy-kick') cands.push(acts[i]);
+      if (k === 'defeat-sv' || k === 'buy-lineup' || k === 'riddler-use' || k === 'riddler-plus' || k === 'buy-kick') cands.push(acts[i]);
     }
     if (!cands.length) return acts[0]; // only end-buying left
 

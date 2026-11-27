@@ -91,7 +91,7 @@ var DCENGINE = (function () {
       playedCards: [], // cards "in use" this turn; swept to Discards at end of turn
       _isFirstPlay: false,
       svDefeatedThisTurn: false, kickBoughtThisTurn: false, jonId: null, rasBottom: false,
-      riddlerAvail: false, riddlerUsed: false, riddlerPaid: false, // #2: Riddler "+1 instead" pays once even if you go back and forth
+      riddlerAvail: false, riddlerUsed: false, riddlerPlus: false, // Riddler Buying choice: use (pay-3 gain-top) OR +1 Power instead — not both
       borrowedLineup: [], locFired: {}, pendingQueue: [], _afterDefeat: false,
       boughtGainedThisTurn: [], villainsBoughtGained: 0,
       _spNames: {}, _cybSP: false, _cybEq: false, _glAwarded: false,
@@ -556,7 +556,8 @@ var DCENGINE = (function () {
       if (top && !st.turn.svDefeatedThisTurn && !st.turn.jonId && svCost(st, p, top) <= st.turn.power) {
         out.push({ kind: 'defeat-sv', cardId: top });
       }
-      if (st.turn.riddlerAvail && st.turn.power >= 3) out.push({ kind: 'riddler-use' });
+      if (st.turn.riddlerAvail && !st.turn.riddlerPlus && st.turn.power >= 3) out.push({ kind: 'riddler-use' }); // Use Riddler: pay 3, gain top of main deck (repeatable)
+      if (st.turn.riddlerAvail && !st.turn.riddlerUsed && !st.turn.riddlerPlus) out.push({ kind: 'riddler-plus' }); // +1 Power instead — mutually exclusive with using it
       if (p.hand.length) out.push({ kind: 'back-to-action' }); // #2: go back and play leftover hand cards
       out.push({ kind: 'end-buying' });
     }
@@ -606,8 +607,8 @@ var DCENGINE = (function () {
     switch (a.kind) {
       case 'play': playCard(st, p, a.cardId); break;
       case 'to-buying':
-        // Riddler: unused ability pays out +1 Power instead (once — #2's go-back must not re-pay)
-        if (st.turn.riddlerAvail && !st.turn.riddlerUsed && !st.turn.riddlerPaid) { addPower(st, p, 1); st.turn.riddlerPaid = true; }
+        // Riddler is a Buying-phase choice — "Use Riddler" (pay 3, gain top) or "+1 Power instead",
+        // offered in actions() and mutually exclusive. No auto-grant here.
         st.turn.phase = 'buying';
         break;
       case 'back-to-action': // #2: return to the Action phase to play leftover hand cards
@@ -658,6 +659,9 @@ var DCENGINE = (function () {
           log(st, 'The Riddler gains ' + C(top).name + ' from the Main Deck.');
         }
         break;
+      }
+      case 'riddler-plus': { // The Riddler: choose not to use it -> +1 Power instead (spendable this turn)
+        st.turn.riddlerPlus = true; addPower(st, p, 1); log(st, "The Riddler's unused ability gives " + p.name + " +1 Power."); break;
       }
       case 'end-buying': cleanUp(st); break;
     }
