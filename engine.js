@@ -512,10 +512,11 @@ var DCENGINE = (function () {
   }
   function scoreGame(st) {
     var out = {};
-    // What each player OWNS at game end: deck + hand + discards + locations, plus the
-    // turn player's in-use pile (unswept on the SV-defeat ending). Never another's.
+    // What each player OWNS at game end: deck + hand + discards + locations + cards held
+    // under their Super Hero (Atrocitus FA), plus the turn player's in-use pile
+    // (unswept on the SV-defeat ending). Never another's. Destroyed cards count for no one.
     var owned = st.players.map(function (p, i) {
-      return p.deck.concat(p.hand, p.discards, p.locations, i === st.turn.idx ? st.turn.playedCards : []);
+      return p.deck.concat(p.hand, p.discards, p.locations, p.heldUnderPersona || [], i === st.turn.idx ? st.turn.playedCards : []);
     });
     // Pools across ALL players ("any player owns") for the end-of-game effects.
     var heroes = 0, equipment = 0;
@@ -526,7 +527,7 @@ var DCENGINE = (function () {
       var total = 0;
       owned[i].forEach(function (id) {
         var base = C(id).vp;
-        if (id === 'bizarro') base = 2 * countInList(owned[i], 'weakness'); // every Weakness THIS player owns, 2 VP each (replaces printed VP)
+        if (id === 'bizarro') base = Math.max(1, 2 * countInList(owned[i], 'weakness')); // 2 VP per owned Weakness; none -> its printed 1 VP
         else if (id === 'suicide-squad') base = ssTotal; // every Suicide Squad in the game counts for every one: N copies -> N^2 total
         else if (id === 'green-arrow' && heroes >= 4) base = 5; // 4+ Heroes owned by any player
         else if (id === 'utility-belt' && equipment >= 4) base = 5; // 4+ Equipment owned by any player

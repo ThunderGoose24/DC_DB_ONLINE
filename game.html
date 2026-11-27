@@ -1158,6 +1158,7 @@
         { label: 'Deck', ids: p.deck.slice() },
         { label: 'Hand', ids: p.hand.slice() },
         { label: 'In Use', ids: (p.id === st.turn.idx) ? st.turn.playedCards.slice() : [] },
+        { label: 'Under Persona', ids: (p.heldUnderPersona || []).slice() }, // Atrocitus FA cards still face down at game end
         { label: 'Locations', ids: p.locations.slice() },
         { label: 'Discards', ids: p.discards.slice() }
       ]); });
