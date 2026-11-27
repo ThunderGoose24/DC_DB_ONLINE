@@ -26,7 +26,7 @@ var AI = (function () {
   /* Per-kind direction for "pick a card" choices: 'high' = sacrifice
    * your most valuable card, 'low' = dump your least valuable one. */
   var PICK_HIGH = { lobo: 1, hv: 1, zz: 1, at: 1, ds: 1, tohand: 1, trident: 1 };
-  var PICK_LOW = { jkfa: 1, dsfa: 1, amfa: 1, penguin: 1, bifa: 1, sinf: 1 };
+  var PICK_LOW = { jkfa: 1, dsfa: 1, amfa: 1, penguin: 1, bifa: 1, sinf: 1, dkfa: 1 };
 
   function easyPending(acts) {
     var d = null;

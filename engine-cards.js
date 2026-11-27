@@ -75,10 +75,11 @@
   /* ================= reroute checks (buy/gain time) ============ */
   function rerouteCheck(st, p, id) {
     var t = st.turn;
-    // Dark Knight / Catwoman: "you may put a card you bought or gained
-    // this turn into your hand" — per-card yes/no at gain time.
-    if (t.playedIds.indexOf('dark-knight') >= 0 && t.playedIds.indexOf('catwoman') >= 0)
-      return { kind: 'hand', id: id, actions: [{ k: 'yes' }, { k: 'no' }] };
+    // Dark Knight / Catwoman: "you may put a card you bought or gained this turn into your hand."
+    // Fires once per turn (first such gain), not on every gain.
+    if (t.playedIds.indexOf('dark-knight') >= 0 && t.playedIds.indexOf('catwoman') >= 0) {
+      if (!t._dkCw) { t._dkCw = true; return { kind: 'hand', id: id, actions: [{ k: 'yes' }, { k: 'no' }] }; }
+    }
     // Aquaman's Trident is now an END-OF-TURN effect (see endOfTurn), not a per-card reroute.
     // Aquaman persona: cost <=5 only; disabled while face down.
     if (!p.faceDown && p.personaId === 'aquaman-mc' && C(id).cost <= 5)
@@ -215,6 +216,7 @@
     "jonn-jonzz": function (st, p) { // plays the active SV for you (ruling)
       var sv = st.svStack[0];
       if (!sv) return;
+      if (st.pendingFA && st.svStack[0] === st.pendingFA.cardId) { log(st, C(sv).name + " is not out yet — J'onn can't use it."); return; } // #6: FA hasn't fired -> not officially out
       st.turn.jonId = sv; // un-defeatable for the rest of your turn
       log(st, p.name + " plays " + C(sv).name + " from the stack (no First Appearance—Attack).");
       E.markPlayed(st, p, sv, true); // cross-play triggers count
@@ -448,13 +450,14 @@
     'captain-cold': function (st, p) { // Persona face down until defeated
       if (!p.faceDown) { p.faceDown = true; log(st, p.name + "'s Super Hero flips face down."); }
     },
-    'darkseid': function (st, p) { // discard two unless a Villain is revealed
-      var vIdx = -1;
-      for (var i = 0; i < p.hand.length; i++) if (typeOf(p.hand[i]) === 'villain' || typeOf(p.hand[i]) === 'sv') { vIdx = i; break; } // SVs count as Villains (#1)
-      if (vIdx >= 0) { log(st, p.name + " reveals a Villain and keeps their hand."); return; }
-      var n = Math.min(2, p.hand.length);
-      for (var k = 0; k < n; k++) p.discards.push(p.hand.splice(randIdx(st, p.hand.length), 1)[0]);
-      log(st, p.name + " discards " + n + ' card' + (n > 1 ? 's' : '') + '.');
+    'darkseid': function (st, p) { // discard two of your choice unless you reveal a Villain
+      if (!p.hand.length) return; // empty hand: nothing to do
+      var hasVillain = false;
+      for (var i = 0; i < p.hand.length; i++) if (typeOf(p.hand[i]) === 'villain' || typeOf(p.hand[i]) === 'sv') { hasVillain = true; break; } // SVs count as Villains (#1)
+      var pend = { kind: 'dkfa', stage: 0, picked: [], max: Math.min(2, p.hand.length), pool: p.hand.slice(), hasVillain: hasVillain };
+      if (hasVillain) pend.actions = [{ k: 'reveal' }, { k: 'discard' }]; // show a Villain, or choose two to discard
+      else { pend.stage = 1; pend.actions = mustPickActs(pend, pend.pool); } // no Villain: just pick two
+      E.setPending(st, pend);
     },
     'deathstroke': function (st, p) { // destroy H/SV/E or gain a Weakness
       var opts = [];
@@ -773,6 +776,18 @@
         if (pend.picked.length < pend.max) { keepPending = true; pend.actions = mustPickActs(pend, pend.pool); }
         else E.addPower(st, p, 5);
         break;
+
+      case 'dkfa': { // Darkseid FA: reveal a Villain (keep hand), or discard two of your choice
+        if (a.k === 'reveal') { log(st, p.name + " reveals a Villain and keeps their hand."); break; }
+        if (a.k === 'discard') { pend.stage = 1; keepPending = true; pend.actions = mustPickActs(pend, pend.pool); break; }
+        pend.picked.push(a.id);
+        if (pend.picked.length < pend.max) { keepPending = true; pend.actions = mustPickActs(pend, pend.pool); }
+        else {
+          pend.picked.forEach(function (x) { var i = p.hand.indexOf(x); if (i >= 0) p.hand.splice(i, 1); p.discards.push(x); });
+          log(st, p.name + " discards their chosen card" + (pend.max > 1 ? 's' : '') + '.');
+        }
+        break;
+      }
 
       case 'am': { // Anti-Monitor: destroy Line-Up cards, then replace them
         if (a.k === 'done') {

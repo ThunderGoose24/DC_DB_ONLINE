@@ -90,7 +90,7 @@ var DCENGINE = (function () {
       playedIds: [], playedTypesThisTurn: {}, crossPlays: [],
       playedCards: [], // cards "in use" this turn; swept to Discards at end of turn
       _isFirstPlay: false,
-      svDefeatedThisTurn: false, kickBoughtThisTurn: false, jonId: null, rasBottom: false,
+      svDefeatedThisTurn: false, kickBoughtThisTurn: false, jonId: null, rasBottom: false, _dkCw: false, // DK/Catwoman "put a gained card in hand" fires once per turn
       riddlerAvail: false, riddlerUsed: false, riddlerPlus: false, // Riddler Buying choice: use (pay-3 gain-top) OR +1 Power instead — not both
       borrowedLineup: [], locFired: {}, pendingQueue: [], _afterDefeat: false,
       boughtGainedThisTurn: [], villainsBoughtGained: 0,
@@ -547,7 +547,11 @@ var DCENGINE = (function () {
     }
 
     if (st.turn.phase === 'action') {
-      p.hand.forEach(function (id) { out.push({ kind: 'play', cardId: id }); });
+      p.hand.forEach(function (id) {
+        // #6: J'onn can't be used on a Super-Villain that isn't "out" yet (its FA hasn't fired).
+        if (id === 'jonn-jonzz' && st.svStack[0] && st.pendingFA && st.svStack[0] === st.pendingFA.cardId) return;
+        out.push({ kind: 'play', cardId: id });
+      });
       out.push({ kind: 'to-buying' });
     } else { // buying
       st.lineup.forEach(function (id, i) { if (id && C(id).cost <= st.turn.power) out.push({ kind: 'buy-lineup', slot: i }); });

@@ -737,6 +737,8 @@
         case 'skip': return 'Skip';
         case 'go': return 'Destroy two (+5 Power)';
         case 'hand': return 'Discard your whole hand';
+        case 'reveal': return 'Reveal a Villain';
+        case 'discard': return 'Discard two instead';
         case 'disc': return 'Discard a random card';
         case 'draw': { var jok = st.players[st.pending.owner]; return 'Let ' + (jok ? jok.name : 'them') + ' draw a card'; }
       }
@@ -764,6 +766,7 @@
     bifa: "Brainiac's First Appearance—Attack — choose two cards; they're shuffled and dealt back out.",
     sinf: "Sinestro's First Appearance—Attack — discard one card for each Hero you revealed.",
     dsfa: "Deathstroke's First Appearance—Attack — destroy a Hero, Super Power, or Equipment.",
+    dkfa: "Darkseid's First Appearance—Attack — discard two cards of your choice, or reveal a Villain to keep your hand.",
     amfa: "Anti-Monitor's First Appearance—Attack — put one of your cost 1+ cards into the Line-Up.",
     jkfa: "The Joker's First Appearance—Attack — give a card to the player on your left.",
     bmfa: "Black Manta's First Appearance—Attack — destroy the revealed card, or discard your whole hand.",
